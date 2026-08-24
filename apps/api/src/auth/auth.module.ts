@@ -1,14 +1,20 @@
 import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+
+import { UsersModule } from '../users/users.module.js';
+import { AuthService } from './auth.service.js';
+import { AuthController } from './auth.controller.js';
+import { JwtStrategy } from './jwt.strategy.js';
 
 /**
- * Modulo Auth — skeleton (Sprint 0).
- * Sprint 1 aggiunge: login/refresh JWT, hashing password, popolamento di
- * `request.user`, e la strategia per il RolesGuard globale.
+ * Modulo Auth (Sprint 1): login/refresh JWT, hashing password (via UsersService),
+ * strategia JWT che popola `request.user` per il RolesGuard globale.
  */
 @Module({
-  imports: [],
-  controllers: [],
-  providers: [],
-  exports: [],
+  imports: [UsersModule, PassportModule, JwtModule.register({})],
+  controllers: [AuthController],
+  providers: [AuthService, JwtStrategy],
+  exports: [AuthService],
 })
 export class AuthModule {}

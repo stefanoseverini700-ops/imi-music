@@ -3,10 +3,13 @@
  * Eseguito con `pnpm --filter @imi/db seed` (o `prisma migrate reset`).
  */
 import { PrismaClient, Role } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID ?? '00000000-0000-0000-0000-000000000000';
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@imimusic.local';
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'admin1234';
 
 async function main() {
   const tenant = await prisma.tenant.upsert({
@@ -19,20 +22,21 @@ async function main() {
     },
   });
 
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
   await prisma.user.upsert({
-    where: { tenantId_email: { tenantId: tenant.id, email: 'admin@imimusic.local' } },
-    update: {},
+    where: { tenantId_email: { tenantId: tenant.id, email: ADMIN_EMAIL } },
+    update: { passwordHash },
     create: {
       tenantId: tenant.id,
       nome: 'Admin',
-      email: 'admin@imimusic.local',
+      email: ADMIN_EMAIL,
       ruolo: Role.ADMIN,
-      // NB: in Fase 1 (Sprint 1, Auth) sostituire con hash reale (argon2/bcrypt).
-      passwordHash: null,
+      passwordHash,
     },
   });
 
   console.log(`✅ Seed completato — tenant "${tenant.nome}" (${tenant.id})`);
+  console.log(`   Admin: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
 }
 
 main()

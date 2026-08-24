@@ -16,10 +16,21 @@ decisioni di design; se cambi il modello dati, tienilo allineato.
 
 ## Stato del progetto
 
-**Fase 0 / Sprint 0 completata** (scaffold). Le funzionalità (auth, CRUD,
-pipeline) arrivano dalla Fase 1 in poi — vedi la roadmap in `ARCHITETTURA.md §6`.
-Molti moduli backend sono **stub** con un commento che indica lo sprint di
-riferimento.
+**Fase 0 / Sprint 0 completata** (scaffold) + **Sprint 1 in corso**.
+
+Implementato:
+
+- **Auth** (`apps/api/src/auth`): login/refresh JWT (access + refresh), hashing
+  password con `bcryptjs`, `JwtStrategy` che popola `request.user`. Endpoint:
+  `POST /api/auth/login`, `POST /api/auth/refresh`, `GET /api/auth/me`.
+- **Gestione utenti** (`apps/api/src/users`): CRUD base, solo Admin, isolato per
+  tenant. Endpoint sotto `/api/users`.
+- **Guard globali**: `JwtAuthGuard` (autenticazione) → `RolesGuard` (RBAC).
+- **Seed**: crea tenant di default + admin (`admin@imimusic.local` / `admin1234`,
+  override con `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`).
+
+I moduli `sales`, `delivery`, `ticketing`, `booking` sono ancora **stub** con un
+commento che indica lo sprint di riferimento. Vedi la roadmap in `ARCHITETTURA.md §6`.
 
 ## Architettura del monorepo
 
