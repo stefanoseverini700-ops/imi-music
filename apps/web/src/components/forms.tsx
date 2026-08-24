@@ -1,0 +1,189 @@
+'use client';
+
+import { useState } from 'react';
+import { ArtistPlan, PaymentStatus } from '@imi/shared';
+import { authPost } from '@/lib/api-client';
+import type { Artist } from '@/lib/dto';
+
+const inputCls =
+  'mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30';
+const labelCls = 'mt-3 block text-sm text-white/70';
+const btnCls =
+  'mt-5 w-full rounded-lg bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-400 disabled:opacity-50';
+
+function ErrorText({ error }: { error: string | null }) {
+  if (!error) return null;
+  return <p className="mt-3 text-sm text-red-400">{error}</p>;
+}
+
+/** Form: nuovo lead nella pipeline. */
+export function NuovoLeadForm({ onDone }: { onDone: () => void }) {
+  const [nome, setNome] = useState('');
+  const [fonte, setFonte] = useState('');
+  const [valore, setValore] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await authPost('/api/leads', {
+        nome,
+        ...(fonte ? { fonte } : {}),
+        ...(valore ? { valoreStimato: Number(valore) } : {}),
+      });
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label className={labelCls}>Nome *</label>
+      <input className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} required />
+      <label className={labelCls}>Fonte</label>
+      <input
+        className={inputCls}
+        value={fonte}
+        onChange={(e) => setFonte(e.target.value)}
+        placeholder="Instagram, referral, evento…"
+      />
+      <label className={labelCls}>Valore stimato (€)</label>
+      <input
+        className={inputCls}
+        type="number"
+        min="0"
+        step="0.01"
+        value={valore}
+        onChange={(e) => setValore(e.target.value)}
+      />
+      <ErrorText error={error} />
+      <button type="submit" disabled={loading} className={btnCls}>
+        {loading ? 'Salvataggio…' : 'Crea lead'}
+      </button>
+    </form>
+  );
+}
+
+/** Form: registra una vendita. */
+export function NuovaVenditaForm({ artists, onDone }: { artists: Artist[]; onDone: () => void }) {
+  const [artistId, setArtistId] = useState(artists[0]?.id ?? '');
+  const [importo, setImporto] = useState('');
+  const [statoPagamento, setStatoPagamento] = useState<string>(PaymentStatus.PAGATO);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await authPost('/api/sales', {
+        artistId,
+        importo: Number(importo),
+        statoPagamento,
+      });
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (artists.length === 0) {
+    return <p className="text-sm text-white/60">Prima aggiungi almeno un artista.</p>;
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label className={labelCls}>Artista *</label>
+      <select className={inputCls} value={artistId} onChange={(e) => setArtistId(e.target.value)}>
+        {artists.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.nome}
+          </option>
+        ))}
+      </select>
+      <label className={labelCls}>Importo (€) *</label>
+      <input
+        className={inputCls}
+        type="number"
+        min="0.01"
+        step="0.01"
+        value={importo}
+        onChange={(e) => setImporto(e.target.value)}
+        required
+      />
+      <label className={labelCls}>Stato pagamento</label>
+      <select
+        className={inputCls}
+        value={statoPagamento}
+        onChange={(e) => setStatoPagamento(e.target.value)}
+      >
+        <option value={PaymentStatus.PAGATO}>Pagato</option>
+        <option value={PaymentStatus.PARZIALE}>Parziale</option>
+        <option value={PaymentStatus.IN_ATTESA}>In attesa</option>
+      </select>
+      <ErrorText error={error} />
+      <button type="submit" disabled={loading} className={btnCls}>
+        {loading ? 'Salvataggio…' : 'Registra vendita'}
+      </button>
+    </form>
+  );
+}
+
+/** Form: nuovo artista. */
+export function NuovoArtistaForm({ onDone }: { onDone: () => void }) {
+  const [nome, setNome] = useState('');
+  const [citta, setCitta] = useState('');
+  const [genere, setGenere] = useState('');
+  const [piano, setPiano] = useState<string>(ArtistPlan.BASE);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await authPost('/api/artists', {
+        nome,
+        ...(citta ? { citta } : {}),
+        ...(genere ? { genereMusicale: genere } : {}),
+        piano,
+      });
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label className={labelCls}>Nome *</label>
+      <input className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} required />
+      <label className={labelCls}>Città</label>
+      <input className={inputCls} value={citta} onChange={(e) => setCitta(e.target.value)} />
+      <label className={labelCls}>Genere musicale</label>
+      <input className={inputCls} value={genere} onChange={(e) => setGenere(e.target.value)} />
+      <label className={labelCls}>Piano</label>
+      <select className={inputCls} value={piano} onChange={(e) => setPiano(e.target.value)}>
+        <option value={ArtistPlan.BASE}>Base</option>
+        <option value={ArtistPlan.PRO}>Pro</option>
+        <option value={ArtistPlan.PREMIUM}>Premium</option>
+      </select>
+      <ErrorText error={error} />
+      <button type="submit" disabled={loading} className={btnCls}>
+        {loading ? 'Salvataggio…' : 'Aggiungi artista'}
+      </button>
+    </form>
+  );
+}

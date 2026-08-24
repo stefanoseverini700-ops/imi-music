@@ -62,7 +62,7 @@ async function seedDemo(tenantId: string, venditoreId: string | null) {
       piano: 'PRO' as const,
     },
   ];
-  let artisti = await prisma.artist.findMany({ where: { tenantId } });
+  const artisti = await prisma.artist.findMany({ where: { tenantId } });
   if (artisti.length === 0) {
     for (const a of artistiData) {
       artisti.push(await prisma.artist.create({ data: { tenantId, ...a } }));

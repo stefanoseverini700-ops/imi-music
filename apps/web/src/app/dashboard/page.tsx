@@ -1,10 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LeadStatus } from '@imi/shared';
-import { authGet, getToken, logout } from '@/lib/api-client';
+import { authGet, authPatch, getToken, logout } from '@/lib/api-client';
 import type { Artist, IncassiDashboard, Lead } from '@/lib/dto';
+import { Modal } from '@/components/Modal';
+import { NuovoArtistaForm, NuovoLeadForm, NuovaVenditaForm } from '@/components/forms';
 
 const EUR = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
 
@@ -16,18 +18,18 @@ const COLONNE: { stato: LeadStatus; label: string }[] = [
   { stato: LeadStatus.PERSO, label: 'Perso' },
 ];
 
+type ModalKind = 'lead' | 'vendita' | 'artista' | null;
+
 export default function DashboardPage() {
   const router = useRouter();
   const [incassi, setIncassi] = useState<IncassiDashboard | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [modal, setModal] = useState<ModalKind>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!getToken()) {
-      router.replace('/login');
-      return;
-    }
+  const refresh = useCallback(() => {
     Promise.all([
       authGet<IncassiDashboard>('/api/sales/dashboard/incassi'),
       authGet<Lead[]>('/api/leads'),
@@ -37,6 +39,7 @@ export default function DashboardPage() {
         setIncassi(i);
         setLeads(l);
         setArtists(a);
+        setError(null);
       })
       .catch((e: Error) => {
         if (e.message === 'unauthorized') router.replace('/login');
@@ -44,24 +47,73 @@ export default function DashboardPage() {
       });
   }, [router]);
 
+  useEffect(() => {
+    if (!getToken()) {
+      router.replace('/login');
+      return;
+    }
+    refresh();
+  }, [router, refresh]);
+
+  /** Sposta un lead nella colonna precedente/successiva del kanban. */
+  async function moveLead(lead: Lead, direction: -1 | 1) {
+    const idx = COLONNE.findIndex((c) => c.stato === lead.stato);
+    const target = COLONNE[idx + direction];
+    if (!target || movingId) return;
+    setMovingId(lead.id);
+    try {
+      await authPatch(`/api/leads/${lead.id}/stato`, { stato: target.stato });
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, stato: target.stato } : l)));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setMovingId(null);
+    }
+  }
+
+  function chiudiEAggiorna() {
+    setModal(null);
+    refresh();
+  }
+
   const maxMese = incassi ? Math.max(1, ...incassi.perMese.map((m) => m.totale)) : 1;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Cruscotto</h1>
           <p className="text-sm text-white/50">Gestionale IMI Music</p>
         </div>
-        <button
-          onClick={() => {
-            logout();
-            router.replace('/login');
-          }}
-          className="rounded-lg border border-white/10 px-3 py-1.5 text-sm hover:bg-white/5"
-        >
-          Esci
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setModal('lead')}
+            className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400"
+          >
+            ➕ Lead
+          </button>
+          <button
+            onClick={() => setModal('vendita')}
+            className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400"
+          >
+            ➕ Vendita
+          </button>
+          <button
+            onClick={() => setModal('artista')}
+            className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400"
+          >
+            ➕ Artista
+          </button>
+          <button
+            onClick={() => {
+              logout();
+              router.replace('/login');
+            }}
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-sm hover:bg-white/5"
+          >
+            Esci
+          </button>
+        </div>
       </header>
 
       {error && <p className="mt-6 text-red-400">Errore: {error}</p>}
@@ -103,11 +155,14 @@ export default function DashboardPage() {
 
       {/* Kanban lead */}
       <section className="mt-8">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
-          Pipeline lead
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
+            Pipeline lead
+          </h2>
+          <span className="text-xs text-white/40">usa ‹ › per spostare un lead</span>
+        </div>
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-5">
-          {COLONNE.map((col) => {
+          {COLONNE.map((col, colIdx) => {
             const items = leads.filter((l) => l.stato === col.stato);
             return (
               <div key={col.stato} className="rounded-xl border border-white/10 bg-white/5 p-3">
@@ -126,6 +181,24 @@ export default function DashboardPage() {
                           {EUR.format(Number(l.valoreStimato))}
                         </p>
                       )}
+                      <div className="mt-1 flex justify-between">
+                        <button
+                          onClick={() => moveLead(l, -1)}
+                          disabled={colIdx === 0 || movingId === l.id}
+                          aria-label="Sposta indietro"
+                          className="rounded px-2 text-white/50 hover:bg-white/10 disabled:invisible"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          onClick={() => moveLead(l, 1)}
+                          disabled={colIdx === COLONNE.length - 1 || movingId === l.id}
+                          aria-label="Sposta avanti"
+                          className="rounded px-2 text-white/50 hover:bg-white/10 disabled:invisible"
+                        >
+                          ›
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -159,6 +232,23 @@ export default function DashboardPage() {
           ))}
         </ul>
       </section>
+
+      {/* Modali */}
+      {modal === 'lead' && (
+        <Modal title="Nuovo lead" onClose={() => setModal(null)}>
+          <NuovoLeadForm onDone={chiudiEAggiorna} />
+        </Modal>
+      )}
+      {modal === 'vendita' && (
+        <Modal title="Registra vendita" onClose={() => setModal(null)}>
+          <NuovaVenditaForm artists={artists} onDone={chiudiEAggiorna} />
+        </Modal>
+      )}
+      {modal === 'artista' && (
+        <Modal title="Nuovo artista" onClose={() => setModal(null)}>
+          <NuovoArtistaForm onDone={chiudiEAggiorna} />
+        </Modal>
+      )}
     </main>
   );
 }

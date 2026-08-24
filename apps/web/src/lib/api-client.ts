@@ -46,18 +46,44 @@ export async function login(email: string, password: string): Promise<void> {
   setTokens(data.accessToken, data.refreshToken);
 }
 
-/** GET autenticato con Bearer token. */
-export async function authGet<T>(path: string): Promise<T> {
+/** Chiamata autenticata con Bearer token; estrae il messaggio d'errore dell'API. */
+async function authFetch<T>(path: string, method: string, body?: unknown): Promise<T> {
   const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    method,
+    headers: {
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
     cache: 'no-store',
   });
   if (res.status === 401) {
     throw new Error('unauthorized');
   }
   if (!res.ok) {
-    throw new Error(`Errore ${res.status}`);
+    let msg = `Errore ${res.status}`;
+    try {
+      const data = (await res.json()) as { message?: string | string[] };
+      if (data?.message) {
+        msg = Array.isArray(data.message) ? data.message.join(' · ') : String(data.message);
+      }
+    } catch {
+      /* corpo non-JSON */
+    }
+    throw new Error(msg);
   }
   return (await res.json()) as T;
+}
+
+export function authGet<T>(path: string): Promise<T> {
+  return authFetch<T>(path, 'GET');
+}
+
+export function authPost<T>(path: string, body: unknown): Promise<T> {
+  return authFetch<T>(path, 'POST', body);
+}
+
+export function authPatch<T>(path: string, body: unknown): Promise<T> {
+  return authFetch<T>(path, 'PATCH', body);
 }
