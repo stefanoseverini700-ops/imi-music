@@ -19,7 +19,8 @@ import { BookingModule } from './booking/booking.module.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    // Carica anche il .env della radice del monorepo (cwd in dev è apps/api).
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env', '.env'] }),
     PrismaModule,
     AuthModule,
     UsersModule,
