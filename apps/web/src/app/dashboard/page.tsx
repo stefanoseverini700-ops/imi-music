@@ -2,11 +2,17 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { LeadStatus } from '@imi/shared';
-import { authGet, authPatch, getToken, logout } from '@/lib/api-client';
-import type { Artist, IncassiDashboard, Lead } from '@/lib/dto';
+import { LeadStatus, Role } from '@imi/shared';
+import { authDelete, authGet, authPatch, getToken, logout } from '@/lib/api-client';
+import type { Artist, IncassiDashboard, Lead, User } from '@/lib/dto';
 import { Modal } from '@/components/Modal';
-import { NuovoArtistaForm, NuovoLeadForm, NuovaVenditaForm } from '@/components/forms';
+import {
+  ModificaLeadForm,
+  NuovoArtistaForm,
+  NuovoLeadForm,
+  NuovoUtenteForm,
+  NuovaVenditaForm,
+} from '@/components/forms';
 
 const EUR = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
 
@@ -18,16 +24,19 @@ const COLONNE: { stato: LeadStatus; label: string }[] = [
   { stato: LeadStatus.PERSO, label: 'Perso' },
 ];
 
-type ModalKind = 'lead' | 'vendita' | 'artista' | null;
+type ModalKind = 'lead' | 'vendita' | 'artista' | 'utente' | null;
 
 export default function DashboardPage() {
   const router = useRouter();
   const [incassi, setIncassi] = useState<IncassiDashboard | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalKind>(null);
-  const [movingId, setMovingId] = useState<string | null>(null);
+  const [leadInModifica, setLeadInModifica] = useState<Lead | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<LeadStatus | null>(null);
 
   const refresh = useCallback(() => {
     Promise.all([
@@ -45,6 +54,10 @@ export default function DashboardPage() {
         if (e.message === 'unauthorized') router.replace('/login');
         else setError(e.message);
       });
+    // Elenco utenti: solo gli Admin possono leggerlo, per gli altri resta vuoto.
+    authGet<User[]>('/api/users')
+      .then(setUsers)
+      .catch(() => setUsers([]));
   }, [router]);
 
   useEffect(() => {
@@ -55,28 +68,61 @@ export default function DashboardPage() {
     refresh();
   }, [router, refresh]);
 
-  /** Sposta un lead nella colonna precedente/successiva del kanban. */
-  async function moveLead(lead: Lead, direction: -1 | 1) {
+  /** Sposta un lead in una colonna specifica del kanban. */
+  async function setLeadStato(lead: Lead, stato: LeadStatus) {
+    if (lead.stato === stato || busyId) return;
+    setBusyId(lead.id);
+    // Aggiornamento ottimistico: la scheda si muove subito.
+    setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, stato } : l)));
+    try {
+      await authPatch(`/api/leads/${lead.id}/stato`, { stato });
+    } catch (e) {
+      setError((e as Error).message);
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, stato: lead.stato } : l)));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function moveLead(lead: Lead, direction: -1 | 1) {
     const idx = COLONNE.findIndex((c) => c.stato === lead.stato);
     const target = COLONNE[idx + direction];
-    if (!target || movingId) return;
-    setMovingId(lead.id);
+    if (target) void setLeadStato(lead, target.stato);
+  }
+
+  async function assegnaLead(lead: Lead, userId: string) {
+    setBusyId(lead.id);
     try {
-      await authPatch(`/api/leads/${lead.id}/stato`, { stato: target.stato });
-      setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, stato: target.stato } : l)));
+      await authPatch(`/api/leads/${lead.id}/assegna`, { assegnatoA: userId });
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, assegnatoA: userId } : l)));
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setMovingId(null);
+      setBusyId(null);
+    }
+  }
+
+  async function eliminaLead(lead: Lead) {
+    if (!confirm(`Eliminare il lead "${lead.nome}"?`)) return;
+    setBusyId(lead.id);
+    try {
+      await authDelete(`/api/leads/${lead.id}`);
+      setLeads((prev) => prev.filter((l) => l.id !== lead.id));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusyId(null);
     }
   }
 
   function chiudiEAggiorna() {
     setModal(null);
+    setLeadInModifica(null);
     refresh();
   }
 
   const maxMese = incassi ? Math.max(1, ...incassi.perMese.map((m) => m.totale)) : 1;
+  const venditori = users.filter((u) => u.ruolo === Role.SALES || u.ruolo === Role.ADMIN);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
@@ -86,24 +132,10 @@ export default function DashboardPage() {
           <p className="text-sm text-white/50">Gestionale IMI Music</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setModal('lead')}
-            className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400"
-          >
-            ➕ Lead
-          </button>
-          <button
-            onClick={() => setModal('vendita')}
-            className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400"
-          >
-            ➕ Vendita
-          </button>
-          <button
-            onClick={() => setModal('artista')}
-            className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400"
-          >
-            ➕ Artista
-          </button>
+          <BtnAzione onClick={() => setModal('lead')}>➕ Lead</BtnAzione>
+          <BtnAzione onClick={() => setModal('vendita')}>➕ Vendita</BtnAzione>
+          <BtnAzione onClick={() => setModal('artista')}>➕ Artista</BtnAzione>
+          <BtnAzione onClick={() => setModal('utente')}>➕ Utente</BtnAzione>
           <button
             onClick={() => {
               logout();
@@ -159,13 +191,33 @@ export default function DashboardPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
             Pipeline lead
           </h2>
-          <span className="text-xs text-white/40">usa ‹ › per spostare un lead</span>
+          <span className="text-xs text-white/40">trascina una scheda, oppure usa ‹ ›</span>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-5">
           {COLONNE.map((col, colIdx) => {
             const items = leads.filter((l) => l.stato === col.stato);
             return (
-              <div key={col.stato} className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <div
+                key={col.stato}
+                data-colonna={col.stato}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(col.stato);
+                }}
+                onDragLeave={() => setDragOver((s) => (s === col.stato ? null : s))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(null);
+                  const id = e.dataTransfer.getData('text/plain');
+                  const lead = leads.find((l) => l.id === id);
+                  if (lead) void setLeadStato(lead, col.stato);
+                }}
+                className={`min-h-[7rem] rounded-xl border p-3 transition-colors ${
+                  dragOver === col.stato
+                    ? 'border-indigo-400 bg-indigo-500/10'
+                    : 'border-white/10 bg-white/5'
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-white/70">{col.label}</span>
                   <span className="rounded-full bg-white/10 px-2 text-xs text-white/60">
@@ -174,27 +226,71 @@ export default function DashboardPage() {
                 </div>
                 <ul className="mt-2 space-y-2">
                   {items.map((l) => (
-                    <li key={l.id} className="rounded-lg bg-black/30 p-2 text-sm">
+                    <li
+                      key={l.id}
+                      draggable
+                      onDragStart={(e) => e.dataTransfer.setData('text/plain', l.id)}
+                      className={`cursor-grab rounded-lg bg-black/30 p-2 text-sm active:cursor-grabbing ${
+                        busyId === l.id ? 'opacity-50' : ''
+                      }`}
+                    >
                       <p className="font-medium">{l.nome}</p>
                       {l.valoreStimato && (
                         <p className="text-xs text-white/50">
                           {EUR.format(Number(l.valoreStimato))}
                         </p>
                       )}
-                      <div className="mt-1 flex justify-between">
+
+                      {venditori.length > 0 && (
+                        <select
+                          value={l.assegnatoA ?? ''}
+                          onChange={(e) => void assegnaLead(l, e.target.value)}
+                          aria-label={`Assegna ${l.nome}`}
+                          className="mt-1 w-full rounded border border-white/10 bg-black/40 px-1 py-0.5 text-[11px] text-white/70"
+                        >
+                          <option value="">Non assegnato</option>
+                          {venditori.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.nome}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      <div className="mt-1 flex items-center justify-between">
                         <button
                           onClick={() => moveLead(l, -1)}
-                          disabled={colIdx === 0 || movingId === l.id}
+                          disabled={colIdx === 0 || busyId === l.id}
                           aria-label="Sposta indietro"
-                          className="rounded px-2 text-white/50 hover:bg-white/10 disabled:invisible"
+                          className="rounded px-1.5 text-white/50 hover:bg-white/10 disabled:invisible"
                         >
                           ‹
                         </button>
+                        <span className="flex gap-1">
+                          <button
+                            onClick={() => {
+                              setLeadInModifica(l);
+                            }}
+                            aria-label={`Modifica ${l.nome}`}
+                            title="Modifica"
+                            className="rounded px-1 text-white/40 hover:bg-white/10 hover:text-white/80"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={() => void eliminaLead(l)}
+                            aria-label={`Elimina ${l.nome}`}
+                            title="Elimina"
+                            className="rounded px-1 text-white/40 hover:bg-white/10 hover:text-red-400"
+                          >
+                            🗑
+                          </button>
+                        </span>
                         <button
                           onClick={() => moveLead(l, 1)}
-                          disabled={colIdx === COLONNE.length - 1 || movingId === l.id}
+                          disabled={colIdx === COLONNE.length - 1 || busyId === l.id}
                           aria-label="Sposta avanti"
-                          className="rounded px-2 text-white/50 hover:bg-white/10 disabled:invisible"
+                          className="rounded px-1.5 text-white/50 hover:bg-white/10 disabled:invisible"
                         >
                           ›
                         </button>
@@ -233,6 +329,34 @@ export default function DashboardPage() {
         </ul>
       </section>
 
+      {/* Team */}
+      {users.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
+            Team ({users.length})
+          </h2>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            {users.map((u) => (
+              <li
+                key={u.id}
+                className="flex items-center justify-between rounded-lg border border-white/10 p-3"
+              >
+                <div>
+                  <p className="font-medium">{u.nome}</p>
+                  <p className="text-xs text-white/50">
+                    {u.email}
+                    {u.dipartimento ? ` · ${u.dipartimento}` : ''}
+                  </p>
+                </div>
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60">
+                  {u.ruolo}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Modali */}
       {modal === 'lead' && (
         <Modal title="Nuovo lead" onClose={() => setModal(null)}>
@@ -249,7 +373,28 @@ export default function DashboardPage() {
           <NuovoArtistaForm onDone={chiudiEAggiorna} />
         </Modal>
       )}
+      {modal === 'utente' && (
+        <Modal title="Nuovo utente" onClose={() => setModal(null)}>
+          <NuovoUtenteForm onDone={chiudiEAggiorna} />
+        </Modal>
+      )}
+      {leadInModifica && (
+        <Modal title="Modifica lead" onClose={() => setLeadInModifica(null)}>
+          <ModificaLeadForm lead={leadInModifica} onDone={chiudiEAggiorna} />
+        </Modal>
+      )}
     </main>
+  );
+}
+
+function BtnAzione({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400"
+    >
+      {children}
+    </button>
   );
 }
 

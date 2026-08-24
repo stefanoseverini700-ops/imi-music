@@ -87,3 +87,7 @@ export function authPost<T>(path: string, body: unknown): Promise<T> {
 export function authPatch<T>(path: string, body: unknown): Promise<T> {
   return authFetch<T>(path, 'PATCH', body);
 }
+
+export function authDelete<T>(path: string): Promise<T> {
+  return authFetch<T>(path, 'DELETE');
+}

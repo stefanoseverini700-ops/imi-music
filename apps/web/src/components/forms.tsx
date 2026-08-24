@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { ArtistPlan, PaymentStatus } from '@imi/shared';
-import { authPost } from '@/lib/api-client';
-import type { Artist } from '@/lib/dto';
+import { ArtistPlan, PaymentStatus, Role } from '@imi/shared';
+import { authPatch, authPost } from '@/lib/api-client';
+import type { Artist, Lead } from '@/lib/dto';
 
 const inputCls =
   'mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30';
@@ -65,6 +65,130 @@ export function NuovoLeadForm({ onDone }: { onDone: () => void }) {
       <ErrorText error={error} />
       <button type="submit" disabled={loading} className={btnCls}>
         {loading ? 'Salvataggio…' : 'Crea lead'}
+      </button>
+    </form>
+  );
+}
+
+/** Form: modifica un lead esistente. */
+export function ModificaLeadForm({ lead, onDone }: { lead: Lead; onDone: () => void }) {
+  const [nome, setNome] = useState(lead.nome);
+  const [fonte, setFonte] = useState(lead.fonte ?? '');
+  const [valore, setValore] = useState(
+    lead.valoreStimato ? String(Number(lead.valoreStimato)) : '',
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await authPatch(`/api/leads/${lead.id}`, {
+        nome,
+        fonte,
+        ...(valore ? { valoreStimato: Number(valore) } : {}),
+      });
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label className={labelCls}>Nome *</label>
+      <input className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} required />
+      <label className={labelCls}>Fonte</label>
+      <input className={inputCls} value={fonte} onChange={(e) => setFonte(e.target.value)} />
+      <label className={labelCls}>Valore stimato (€)</label>
+      <input
+        className={inputCls}
+        type="number"
+        min="0"
+        step="0.01"
+        value={valore}
+        onChange={(e) => setValore(e.target.value)}
+      />
+      <ErrorText error={error} />
+      <button type="submit" disabled={loading} className={btnCls}>
+        {loading ? 'Salvataggio…' : 'Salva modifiche'}
+      </button>
+    </form>
+  );
+}
+
+/** Form: nuovo utente dello staff (venditore, operatore, admin). */
+export function NuovoUtenteForm({ onDone }: { onDone: () => void }) {
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [ruolo, setRuolo] = useState<string>(Role.SALES);
+  const [dipartimento, setDipartimento] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await authPost('/api/users', {
+        nome,
+        email,
+        password,
+        ruolo,
+        ...(dipartimento ? { dipartimento } : {}),
+      });
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label className={labelCls}>Nome *</label>
+      <input className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} required />
+      <label className={labelCls}>Email *</label>
+      <input
+        className={inputCls}
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <label className={labelCls}>Password * (min. 8 caratteri)</label>
+      <input
+        className={inputCls}
+        type="password"
+        minLength={8}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+      <label className={labelCls}>Ruolo</label>
+      <select className={inputCls} value={ruolo} onChange={(e) => setRuolo(e.target.value)}>
+        <option value={Role.SALES}>Sales (venditore)</option>
+        <option value={Role.OPERATORE}>Operatore</option>
+        <option value={Role.ADMIN}>Admin</option>
+        <option value={Role.ARTISTA}>Artista</option>
+      </select>
+      <label className={labelCls}>Dipartimento</label>
+      <input
+        className={inputCls}
+        value={dipartimento}
+        onChange={(e) => setDipartimento(e.target.value)}
+        placeholder="es. Produzione, Grafica, SMM"
+      />
+      <ErrorText error={error} />
+      <button type="submit" disabled={loading} className={btnCls}>
+        {loading ? 'Salvataggio…' : 'Crea utente'}
       </button>
     </form>
   );

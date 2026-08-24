@@ -1,5 +1,5 @@
 // Tipi delle risposte API usati dal frontend.
-import type { LeadStatus } from '@imi/shared';
+import type { LeadStatus, Role } from '@imi/shared';
 
 export interface IncassiDashboard {
   oggi: number;
@@ -15,6 +15,16 @@ export interface Lead {
   fonte: string | null;
   stato: LeadStatus;
   valoreStimato: string | null;
+  assegnatoA: string | null;
+}
+
+export interface User {
+  id: string;
+  nome: string;
+  email: string;
+  ruolo: Role;
+  dipartimento: string | null;
+  stato: string;
 }
 
 export interface Artist {
