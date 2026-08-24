@@ -25,6 +25,9 @@ Implementato:
   `POST /api/auth/login`, `POST /api/auth/refresh`, `GET /api/auth/me`.
 - **Gestione utenti** (`apps/api/src/users`): CRUD base, solo Admin, isolato per
   tenant. Endpoint sotto `/api/users`.
+- **CRUD Artisti** (`apps/api/src/artists`): isolato per tenant. Lettura staff
+  interno (Admin/Sales/Operatori), scrittura solo Admin. Endpoint `/api/artists`
+  (`GET`, `GET/:id`, `POST`, `PATCH/:id`, `DELETE/:id`).
 - **Guard globali**: `JwtAuthGuard` (autenticazione) → `RolesGuard` (RBAC).
 - **Seed**: crea tenant di default + admin (`admin@imimusic.local` / `admin1234`,
   override con `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`).
