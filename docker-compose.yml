@@ -1,0 +1,38 @@
+# Ambiente di sviluppo locale: PostgreSQL (con PostGIS) + Redis.
+# Avvio: `pnpm docker:up`  —  Stop: `pnpm docker:down`
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: imi_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-imi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-imi_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-imi_music}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - imi_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-imi} -d ${POSTGRES_DB:-imi_music}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: imi_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - imi_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  imi_pgdata:
+  imi_redisdata:

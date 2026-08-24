@@ -1,0 +1,683 @@
+// =============================================================================
+// IMI Music — Schema Prisma v1 (Sprint 0)
+// Traduzione dello schema entità-relazione di ARCHITETTURA.md §5.
+//
+// Convenzioni:
+//  - PK uuid, generati dal DB.
+//  - Multi-tenant: `tenantId` sulle tabelle principali (aggregate root). Le
+//    tabelle figlie (SaleItem, DeliveryStage, JourneyPhase, ...) ereditano il
+//    tenant tramite la relazione col genitore, per evitare ridondanza.
+//  - PostGIS è abilitato come extension: le colonne geometry per la mappa
+//    geolocalizzata (Booking, Sprint 9) sostituiranno lat/lng float quando
+//    serviranno query spaziali. Per ora lat/lng restano Float come nell'ER.
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/client"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+// -----------------------------------------------------------------------------
+// Multi-tenant
+// -----------------------------------------------------------------------------
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  nome      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users           User[]
+  artists         Artist[]
+  leads           Lead[]
+  sales           Sale[]
+  serviceCatalog  ServiceCatalog[]
+  deliveryPlans   DeliveryPlan[]
+  journeys        Journey[]
+  tasks           Task[]
+  penalties       Penalty[]
+  consultations   Consultation[]
+  departments     Department[]
+  tickets         Ticket[]
+  fileAssets      FileAsset[]
+  venues          Venue[]
+  events          Event[]
+  releases        Release[]
+  notifications   Notification[]
+
+  @@map("tenants")
+}
+
+// -----------------------------------------------------------------------------
+// Utenti & RBAC
+// -----------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  SALES
+  OPERATORE
+  ARTISTA
+}
+
+enum UserStatus {
+  ATTIVO
+  SOSPESO
+  DISATTIVATO
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  tenantId     String     @db.Uuid
+  nome         String
+  email        String
+  passwordHash String?
+  ruolo        Role
+  dipartimento String?
+  stato        UserStatus @default(ATTIVO)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  artist            Artist?        @relation("AccountArtista")
+  leadsAssegnati    Lead[]         @relation("LeadAssegnato")
+  venditeEffettuate Sale[]         @relation("VenditoreSale")
+  taskAssegnati     Task[]         @relation("TaskAssegnato")
+  ticketCreati      Ticket[]       @relation("TicketCreatoDa")
+  ticketAssegnati   Ticket[]       @relation("TicketAssegnatoA")
+  consulenzeCondotte Consultation[] @relation("ConsulenzaStaff")
+  penalties         Penalty[]
+  notifications     Notification[]
+  ticketMessages    TicketMessage[]
+  fileCaricati      FileAsset[]     @relation("FileCaricatoDa")
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+enum ArtistPlan {
+  BASE
+  PRO
+  PREMIUM
+}
+
+model Artist {
+  id             String     @id @default(uuid()) @db.Uuid
+  tenantId       String     @db.Uuid
+  userId         String?    @unique @db.Uuid
+  nome           String
+  citta          String?
+  lat            Float?
+  lng            Float?
+  genereMusicale String?
+  piano          ArtistPlan @default(BASE)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation("AccountArtista", fields: [userId], references: [id], onDelete: SetNull)
+
+  lead          Lead?          @relation("LeadArtista")
+  sales         Sale[]
+  consultations Consultation[]
+  journey       Journey?
+  deliveryPlans DeliveryPlan[]
+  events        Event[]
+  tickets       Ticket[]
+  releases      Release[]
+
+  @@index([tenantId])
+  @@map("artists")
+}
+
+// -----------------------------------------------------------------------------
+// Sales
+// -----------------------------------------------------------------------------
+
+enum LeadStatus {
+  NUOVO
+  QUALIFICATO
+  IN_TRATTATIVA
+  VINTO
+  PERSO
+}
+
+model Lead {
+  id            String     @id @default(uuid()) @db.Uuid
+  tenantId      String     @db.Uuid
+  nome          String
+  fonte         String?
+  stato         LeadStatus @default(NUOVO)
+  valoreStimato Decimal?   @db.Decimal(12, 2)
+  assegnatoA    String?    @db.Uuid
+  artistId      String?    @unique @db.Uuid
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assegnato  User?   @relation("LeadAssegnato", fields: [assegnatoA], references: [id], onDelete: SetNull)
+  artist     Artist? @relation("LeadArtista", fields: [artistId], references: [id], onDelete: SetNull)
+  sales      Sale[]
+
+  @@index([tenantId])
+  @@index([assegnatoA])
+  @@map("leads")
+}
+
+enum PaymentStatus {
+  IN_ATTESA
+  PARZIALE
+  PAGATO
+  RIMBORSATO
+}
+
+model Sale {
+  id            String        @id @default(uuid()) @db.Uuid
+  tenantId      String        @db.Uuid
+  leadId        String?       @db.Uuid
+  artistId      String        @db.Uuid
+  venditoreId   String?       @db.Uuid
+  importo       Decimal       @db.Decimal(12, 2)
+  statoPagamento PaymentStatus @default(IN_ATTESA)
+  data          DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead      Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  artist    Artist  @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  venditore User?   @relation("VenditoreSale", fields: [venditoreId], references: [id], onDelete: SetNull)
+
+  items        SaleItem[]
+  deliveryPlan DeliveryPlan?
+
+  @@index([tenantId])
+  @@index([artistId])
+  @@map("sales")
+}
+
+enum ServiceCategory {
+  DISTRIBUZIONE
+  MANAGEMENT
+  ADVERTISING_PROMO
+  PITCH_PR
+  LIVE
+  BRANDING
+}
+
+model ServiceCatalog {
+  id         String          @id @default(uuid()) @db.Uuid
+  tenantId   String          @db.Uuid
+  nome       String
+  categoria  ServiceCategory
+  prezzoBase Decimal         @db.Decimal(12, 2)
+  attivo     Boolean         @default(true)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  saleItems      SaleItem[]
+  deliveryStages DeliveryStage[]
+
+  @@index([tenantId])
+  @@map("service_catalog")
+}
+
+model SaleItem {
+  id        String  @id @default(uuid()) @db.Uuid
+  saleId    String  @db.Uuid
+  serviceId String  @db.Uuid
+  prezzo    Decimal @db.Decimal(12, 2)
+
+  sale    Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  service ServiceCatalog @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@index([saleId])
+  @@map("sale_items")
+}
+
+// -----------------------------------------------------------------------------
+// Delivery — Piano di Delivery (pattern "Caronte")
+// -----------------------------------------------------------------------------
+
+enum DeliveryPlanStatus {
+  BOZZA
+  ATTIVO
+  COMPLETATO
+  SOSPESO
+}
+
+model DeliveryPlan {
+  id        String             @id @default(uuid()) @db.Uuid
+  tenantId  String             @db.Uuid
+  artistId  String             @db.Uuid
+  saleId    String?            @unique @db.Uuid
+  stato     DeliveryPlanStatus @default(BOZZA)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  sale   Sale?  @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  stages DeliveryStage[]
+
+  @@index([tenantId])
+  @@index([artistId])
+  @@map("delivery_plans")
+}
+
+model DeliveryStage {
+  id             String  @id @default(uuid()) @db.Uuid
+  deliveryPlanId String  @db.Uuid
+  serviceId      String  @db.Uuid
+  percentuale    Int     @default(0)
+  ordine         Int
+
+  deliveryPlan DeliveryPlan   @relation(fields: [deliveryPlanId], references: [id], onDelete: Cascade)
+  service      ServiceCatalog @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  tasks Task[]
+
+  @@index([deliveryPlanId])
+  @@map("delivery_stages")
+}
+
+enum TaskStatus {
+  DA_FARE
+  IN_CORSO
+  IN_REVISIONE
+  COMPLETATO
+}
+
+enum TaskPriority {
+  BASSA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+model Task {
+  id              String       @id @default(uuid()) @db.Uuid
+  tenantId        String       @db.Uuid
+  deliveryStageId String?      @db.Uuid
+  titolo          String
+  descrizione     String?
+  assegnatoA      String?      @db.Uuid
+  scadenza        DateTime?
+  stato           TaskStatus   @default(DA_FARE)
+  priorita        TaskPriority @default(MEDIA)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveryStage DeliveryStage? @relation(fields: [deliveryStageId], references: [id], onDelete: SetNull)
+  assegnato     User?          @relation("TaskAssegnato", fields: [assegnatoA], references: [id], onDelete: SetNull)
+
+  penalties Penalty[]
+
+  @@index([tenantId])
+  @@index([assegnatoA])
+  @@map("tasks")
+}
+
+model Penalty {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  taskId    String?  @db.Uuid
+  userId    String   @db.Uuid
+  motivo    String
+  importo   Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  task   Task?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("penalties")
+}
+
+// -----------------------------------------------------------------------------
+// Percorso (piano editoriale a fasi, indipendente dai servizi venduti)
+// -----------------------------------------------------------------------------
+
+model Journey {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  artistId    String   @unique @db.Uuid
+  nome        String
+  faseCorrente Int     @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  phases JourneyPhase[]
+
+  @@index([tenantId])
+  @@map("journeys")
+}
+
+model JourneyPhase {
+  id        String @id @default(uuid()) @db.Uuid
+  journeyId String @db.Uuid
+  nome      String
+  ordine    Int
+
+  journey Journey       @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  tasks   JourneyTask[]
+
+  @@index([journeyId])
+  @@map("journey_phases")
+}
+
+model JourneyTask {
+  id             String  @id @default(uuid()) @db.Uuid
+  journeyPhaseId String  @db.Uuid
+  titolo         String
+  completato     Boolean @default(false)
+
+  phase JourneyPhase @relation(fields: [journeyPhaseId], references: [id], onDelete: Cascade)
+
+  @@index([journeyPhaseId])
+  @@map("journey_tasks")
+}
+
+// -----------------------------------------------------------------------------
+// Consulenze
+// -----------------------------------------------------------------------------
+
+enum ConsultationType {
+  GRUPPO
+  INDIVIDUALE
+}
+
+enum ConsultationOutcome {
+  SVOLTA
+  NO_SHOW
+  RIMANDATA
+}
+
+model Consultation {
+  id        String              @id @default(uuid()) @db.Uuid
+  tenantId  String              @db.Uuid
+  artistId  String              @db.Uuid
+  staffId   String?             @db.Uuid
+  tipo      ConsultationType
+  esito     ConsultationOutcome @default(SVOLTA)
+  data      DateTime
+  note      String?
+  createdAt DateTime            @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  artist Artist  @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  staff  User?   @relation("ConsulenzaStaff", fields: [staffId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([artistId])
+  @@map("consultations")
+}
+
+// -----------------------------------------------------------------------------
+// Ticketing
+// -----------------------------------------------------------------------------
+
+model Department {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  nome     String
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tickets    Ticket[]
+  fileAssets FileAsset[]
+
+  @@index([tenantId])
+  @@map("departments")
+}
+
+enum TicketStatus {
+  APERTO
+  IN_LAVORAZIONE
+  IN_ATTESA
+  RISOLTO
+  CHIUSO
+}
+
+enum TicketPriority {
+  BASSA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+model Ticket {
+  id           String         @id @default(uuid()) @db.Uuid
+  tenantId     String         @db.Uuid
+  departmentId String?        @db.Uuid
+  artistId     String?        @db.Uuid
+  creatoDa     String?        @db.Uuid
+  assegnatoA   String?        @db.Uuid
+  oggetto      String
+  stato        TicketStatus   @default(APERTO)
+  priorita     TicketPriority @default(MEDIA)
+  slaScadenza  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  artist     Artist?     @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  creatore   User?       @relation("TicketCreatoDa", fields: [creatoDa], references: [id], onDelete: SetNull)
+  assegnato  User?       @relation("TicketAssegnatoA", fields: [assegnatoA], references: [id], onDelete: SetNull)
+
+  messages TicketMessage[]
+
+  @@index([tenantId])
+  @@index([departmentId])
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id       String   @id @default(uuid()) @db.Uuid
+  ticketId String   @db.Uuid
+  autoreId String?  @db.Uuid
+  testo    String
+  creatoIl DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  autore User?  @relation(fields: [autoreId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
+  @@map("ticket_messages")
+}
+
+// -----------------------------------------------------------------------------
+// File assets (polimorfico) — cfr. ER §5: owner_type/owner_id
+// -----------------------------------------------------------------------------
+
+enum FileOwnerType {
+  ARTIST
+  TASK
+  TICKET
+  RELEASE
+}
+
+enum FileAssetType {
+  MASTER_AUDIO
+  COPERTINA
+  VIDEO
+  GRAFICA
+  DOCUMENTO
+  ALTRO
+}
+
+model FileAsset {
+  id           String        @id @default(uuid()) @db.Uuid
+  tenantId     String        @db.Uuid
+  ownerType    FileOwnerType
+  ownerId      String        @db.Uuid
+  departmentId String?       @db.Uuid
+  tipo         FileAssetType @default(ALTRO)
+  nomeFile     String
+  url          String
+  versione     Int           @default(1)
+  caricatoDa   String?       @db.Uuid
+  createdAt    DateTime      @default(now())
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  caricatore User?       @relation("FileCaricatoDa", fields: [caricatoDa], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([ownerType, ownerId])
+  @@map("file_assets")
+}
+
+// -----------------------------------------------------------------------------
+// Booking live
+// -----------------------------------------------------------------------------
+
+model Venue {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @db.Uuid
+  nome     String
+  citta    String?
+  lat      Float?
+  lng      Float?
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@index([tenantId])
+  @@map("venues")
+}
+
+enum EventStatus {
+  PROPOSTO
+  ACCETTATO
+  RIFIUTATO
+}
+
+model Event {
+  id        String      @id @default(uuid()) @db.Uuid
+  tenantId  String      @db.Uuid
+  artistId  String?     @db.Uuid
+  venueId   String?     @db.Uuid
+  data      DateTime
+  stato     EventStatus @default(PROPOSTO)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  artist Artist? @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  venue  Venue?  @relation(fields: [venueId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@map("events")
+}
+
+// -----------------------------------------------------------------------------
+// Discografia — Release / Label Copy / Stream Stat
+// -----------------------------------------------------------------------------
+
+enum ReleaseStatus {
+  BOZZA
+  IN_LAVORAZIONE
+  PROGRAMMATA
+  PUBBLICATA
+}
+
+model Release {
+  id        String        @id @default(uuid()) @db.Uuid
+  tenantId  String        @db.Uuid
+  artistId  String        @db.Uuid
+  titolo    String
+  dataUscita DateTime?
+  isrc      String?
+  genere    String?
+  explicit  Boolean       @default(false)
+  stato     ReleaseStatus @default(BOZZA)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  artist    Artist       @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  labelCopy LabelCopy?
+  streamStats StreamStat[]
+
+  @@index([tenantId])
+  @@index([artistId])
+  @@map("releases")
+}
+
+model LabelCopy {
+  id               String  @id @default(uuid()) @db.Uuid
+  releaseId        String  @unique @db.Uuid
+  autore           String?
+  compositore      String?
+  editori          String?
+  linkSpotify      String?
+  linkTiktok       String?
+  startTimeTiktok  String?
+  bioTerzaPersona  String?
+  descrizionePitch String?
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@map("label_copies")
+}
+
+model StreamStat {
+  id          String   @id @default(uuid()) @db.Uuid
+  releaseId   String   @db.Uuid
+  data        DateTime
+  piattaforma String
+  ascolti     Int      @default(0)
+  revenue     Decimal  @default(0) @db.Decimal(12, 2)
+
+  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId])
+  @@map("stream_stats")
+}
+
+// -----------------------------------------------------------------------------
+// Notifiche
+// -----------------------------------------------------------------------------
+
+enum NotificationType {
+  SCADENZA
+  TASK
+  TICKET
+  SISTEMA
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  tenantId  String           @db.Uuid
+  userId    String           @db.Uuid
+  tipo      NotificationType
+  testo     String?
+  letto     Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("notifications")
+}
