@@ -1,5 +1,14 @@
 // Tipi delle risposte API usati dal frontend.
-import type { AppuntamentoTipo, LeadStatus, Role } from '@imi/shared';
+import type {
+  AppuntamentoTipo,
+  DeliveryPlanStatus,
+  LeadStatus,
+  ReleaseStatus,
+  Role,
+  ServiceCategory,
+  TaskPriority,
+  TaskStatus,
+} from '@imi/shared';
 
 export interface IncassiDashboard {
   oggi: number;
@@ -50,6 +59,62 @@ export interface Feedback {
   testo: string;
   createdAt: string;
   autore: { id: string; nome: string } | null;
+}
+
+export interface Servizio {
+  id: string;
+  nome: string;
+  categoria: ServiceCategory;
+  prezzoBase: string;
+  attivo: boolean;
+}
+
+export interface DeliveryStage {
+  id: string;
+  percentuale: number;
+  ordine: number;
+  service: { id: string; nome: string; categoria: ServiceCategory };
+}
+
+export interface DeliveryPiano {
+  id: string;
+  stato: DeliveryPlanStatus;
+  avanzamento: number;
+  artist: { id: string; nome: string };
+  stages: DeliveryStage[];
+}
+
+export interface Task {
+  id: string;
+  titolo: string;
+  descrizione: string | null;
+  stato: TaskStatus;
+  priorita: TaskPriority;
+  scadenza: string | null;
+  assegnato: { id: string; nome: string } | null;
+}
+
+export interface LabelCopy {
+  autore: string | null;
+  compositore: string | null;
+  editori: string | null;
+  linkSpotify: string | null;
+  linkTiktok: string | null;
+  startTimeTiktok: string | null;
+  bioTerzaPersona: string | null;
+  descrizionePitch: string | null;
+}
+
+export interface Release {
+  id: string;
+  titolo: string;
+  dataUscita: string | null;
+  isrc: string | null;
+  genere: string | null;
+  explicit: boolean;
+  stato: ReleaseStatus;
+  artist: { id: string; nome: string };
+  labelCopy: LabelCopy | null;
 }
 
 export interface Artist {

@@ -88,6 +88,10 @@ export function authPatch<T>(path: string, body: unknown): Promise<T> {
   return authFetch<T>(path, 'PATCH', body);
 }
 
+export function authPut<T>(path: string, body: unknown): Promise<T> {
+  return authFetch<T>(path, 'PUT', body);
+}
+
 export function authDelete<T>(path: string): Promise<T> {
   return authFetch<T>(path, 'DELETE');
 }

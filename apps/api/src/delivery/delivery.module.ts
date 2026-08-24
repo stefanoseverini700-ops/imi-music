@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 
-/**
- * Dominio Delivery — skeleton (Sprint 0).
- * Sprint 4: catalogo servizi, Piano di Delivery, timeline, task, Release/Label Copy.
- */
+import { DeliveryService } from './delivery.service.js';
+import { DeliveryController } from './delivery.controller.js';
+
+/** Dominio Delivery (Sprint 4): piani, fasi con avanzamento, task. */
 @Module({
-  imports: [],
-  controllers: [],
-  providers: [],
+  controllers: [DeliveryController],
+  providers: [DeliveryService],
+  exports: [DeliveryService],
 })
 export class DeliveryModule {}

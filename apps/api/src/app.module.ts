@@ -15,6 +15,8 @@ import { LeadsModule } from './leads/leads.module.js';
 import { SalesModule } from './sales/sales.module.js';
 import { CalendarioModule } from './calendario/calendario.module.js';
 import { FeedbackModule } from './feedback/feedback.module.js';
+import { ServiziModule } from './servizi/servizi.module.js';
+import { ReleasesModule } from './releases/releases.module.js';
 import { DeliveryModule } from './delivery/delivery.module.js';
 import { TicketingModule } from './ticketing/ticketing.module.js';
 import { BookingModule } from './booking/booking.module.js';
@@ -31,6 +33,8 @@ import { BookingModule } from './booking/booking.module.js';
     SalesModule,
     CalendarioModule,
     FeedbackModule,
+    ServiziModule,
+    ReleasesModule,
     DeliveryModule,
     TicketingModule,
     BookingModule,

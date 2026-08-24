@@ -16,7 +16,7 @@ decisioni di design; se cambi il modello dati, tienilo allineato.
 
 ## Stato del progetto
 
-**Fase 0 / Sprint 0 completata** (scaffold) + **Sprint 1 completato** + **Sprint 2 in corso** (Sales).
+**Fase 0 (Sprint 0) completata** + **Sprint 1, 2, 3 e 4 completati**.
 
 Implementato:
 
@@ -39,9 +39,17 @@ Implementato:
   (call/riunione/assenza). CRUD sotto `/api/calendario`.
 - **Bacheca feedback** (`apps/api/src/feedback`): messaggi interni al team.
   L'autore elimina i propri, l'Admin qualsiasi. CRUD sotto `/api/feedback`.
-- **Frontend** (`apps/web`): login + cruscotto interattivo — creazione di lead,
-  vendite, artisti, utenti, appuntamenti e feedback; kanban con drag & drop,
-  modifica/eliminazione e assegnazione dei lead.
+- **Catalogo servizi** (`apps/api/src/servizi`): CRUD sotto `/api/servizi`.
+  Lettura staff, scrittura Admin; l'eliminazione è una disattivazione logica.
+- **Delivery** (`apps/api/src/delivery`): piani per artista con fasi (una per
+  servizio) e percentuale di avanzamento; l'avanzamento del piano è la media
+  delle fasi. Task collegabili alle fasi, con stato/priorità/assegnatario
+  (gli Operatori vedono solo i propri). Rotte sotto `/api/delivery`.
+- **Release + Label Copy** (`apps/api/src/releases`): discografia con scheda
+  metadati (`PUT /api/releases/:id/label-copy`).
+- **Frontend** (`apps/web`): `/dashboard` (cruscotto Sales) e `/delivery`
+  (servizi, piani, task, release). Creazione da modali, kanban lead con
+  drag & drop, slider di avanzamento delle fasi, kanban task.
 - **Guard globali**: `JwtAuthGuard` (autenticazione) → `RolesGuard` (RBAC).
 - **Seed**: crea tenant di default + admin (`admin@imimusic.local` / `admin1234`,
   override con `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`).

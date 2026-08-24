@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { LeadStatus, Role } from '@imi/shared';
@@ -179,6 +180,12 @@ export default function DashboardPage() {
           <BtnAzione onClick={() => setModal('utente')}>➕ Utente</BtnAzione>
           <BtnAzione onClick={() => setModal('appuntamento')}>📅 Agenda</BtnAzione>
           <BtnAzione onClick={() => setModal('feedback')}>💬 Feedback</BtnAzione>
+          <Link
+            href="/delivery"
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-sm hover:bg-white/5"
+          >
+            Delivery →
+          </Link>
           <button
             onClick={() => {
               logout();
