@@ -27,13 +27,13 @@ Monorepo **pnpm workspaces + Turborepo**. "Monolite modulare": confini di domini
 netti in un'unica codebase, scomponibile in servizi solo se un modulo lo
 giustifica.
 
-| Path | Package | Contenuto |
-|------|---------|-----------|
-| `apps/web` | `@imi/web` | Next.js (App Router) + TS + Tailwind. TanStack Query per i dati server, Zustand per lo stato locale. |
-| `apps/api` | `@imi/api` | NestJS. Un modulo per dominio: `auth`, `sales`, `delivery`, `ticketing`, `booking`. `PrismaModule` globale, `RolesGuard` globale. |
-| `packages/db` | `@imi/db` | Prisma: `prisma/schema.prisma` (v1, tradotto dall'ER), client generato in `generated/`, `seed.ts`. |
+| Path              | Package       | Contenuto                                                                                                                                               |
+| ----------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`        | `@imi/web`    | Next.js (App Router) + TS + Tailwind. TanStack Query per i dati server, Zustand per lo stato locale.                                                    |
+| `apps/api`        | `@imi/api`    | NestJS. Un modulo per dominio: `auth`, `sales`, `delivery`, `ticketing`, `booking`. `PrismaModule` globale, `RolesGuard` globale.                       |
+| `packages/db`     | `@imi/db`     | Prisma: `prisma/schema.prisma` (v1, tradotto dall'ER), client Prisma generato (`@prisma/client`), `seed.ts`. Buildato a `dist/`.                        |
 | `packages/shared` | `@imi/shared` | Enum di dominio (`enums.ts`) e contratti RBAC (`rbac.ts`: `Role`, `ModuleKey`, `can()`). Unica fonte di verità per ruoli/stati, usata da API **e** Web. |
-| `packages/config` | `@imi/config` | Preset `tsconfig` condivisi (nestjs/nextjs). |
+| `packages/config` | `@imi/config` | Preset `tsconfig` condivisi (nestjs/nextjs).                                                                                                            |
 
 ## Convenzioni chiave
 
@@ -49,9 +49,11 @@ giustifica.
   enum TS (in `@imi/shared/enums.ts`) devono restare **allineati per nome**.
 - **File polimorfici**: `FileAsset` usa `ownerType`/`ownerId` (nessuna FK rigida)
   per agganciarsi ad artist/task/ticket/release — un unico sistema di upload.
-- **Import ESM**: i package usano `type: module`; negli import relativi TS usa
-  l'estensione `.js` (NodeNext). NestJS è compilato in CommonJS (vedi
-  `packages/config/tsconfig/nestjs.json`).
+- **Moduli**: i package interni (`@imi/shared`, `@imi/db`) e l'API NestJS sono
+  **CommonJS**, buildati a `dist/` con `tsc`; così l'API compilata può fare
+  `require()` dei package del workspace a runtime. Negli import relativi TS usa
+  comunque l'estensione `.js`. Il web (Next.js) importa i package già buildati.
+  Turbo esegue `^build` prima di `dev`/`typecheck`, quindi i `dist` sono pronti.
 - **Lingua**: identificatori di dominio, enum, messaggi ed errori in italiano.
 
 ## Comandi
@@ -80,4 +82,4 @@ pnpm lint && pnpm typecheck    # controlli
   servono al frontend.
 - Route protette: sono protette per default dal `RolesGuard` globale; usa
   `@Public()` per quelle aperte e `@Roles(...)` per limitare i ruoli macro.
-- Non committare `.env` né la cartella `generated/` (già in `.gitignore`).
+- Non committare `.env` né le cartelle `dist/` / `node_modules/` (già in `.gitignore`).

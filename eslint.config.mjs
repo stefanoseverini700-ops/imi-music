@@ -19,6 +19,8 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     rules: {
+      // TypeScript gestisce già gli identificatori non definiti (React, process, ...).
+      'no-undef': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },

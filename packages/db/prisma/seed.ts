@@ -2,12 +2,11 @@
  * Seed di sviluppo: crea il tenant di default e un utente Admin.
  * Eseguito con `pnpm --filter @imi/db seed` (o `prisma migrate reset`).
  */
-import { PrismaClient, Role } from '../generated/client/index.js';
+import { PrismaClient, Role } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const DEFAULT_TENANT_ID =
-  process.env.DEFAULT_TENANT_ID ?? '00000000-0000-0000-0000-000000000000';
+const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID ?? '00000000-0000-0000-0000-000000000000';
 
 async function main() {
   const tenant = await prisma.tenant.upsert({

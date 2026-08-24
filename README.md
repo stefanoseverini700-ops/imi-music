@@ -6,12 +6,12 @@ CRM/ERP ibrido per agenzia musicale — domini **Sales**, **Delivery**, **Ticket
 
 ## Stack
 
-| Area | Tecnologie |
-|------|------------|
+| Area     | Tecnologie                                                               |
+| -------- | ------------------------------------------------------------------------ |
 | Frontend | Next.js (App Router) + TypeScript, Tailwind CSS, TanStack Query, Zustand |
-| Backend | NestJS (TypeScript), moduli per dominio, guard RBAC, JWT (Sprint 1) |
-| Dati | PostgreSQL + PostGIS, Prisma ORM, Redis (cache/code) |
-| Tooling | pnpm workspaces + Turborepo, ESLint + Prettier, GitHub Actions |
+| Backend  | NestJS (TypeScript), moduli per dominio, guard RBAC, JWT (Sprint 1)      |
+| Dati     | PostgreSQL + PostGIS, Prisma ORM, Redis (cache/code)                     |
+| Tooling  | pnpm workspaces + Turborepo, ESLint + Prettier, GitHub Actions           |
 
 ## Struttura del monorepo
 
@@ -56,15 +56,15 @@ Verifica: `http://localhost:4000/api/health` → `{ "status": "ok", "db": "up" }
 
 ## Script utili (root)
 
-| Comando | Effetto |
-|---------|---------|
-| `pnpm dev` | Avvia tutte le app in watch (Turborepo) |
-| `pnpm build` | Build di tutto il monorepo |
-| `pnpm lint` / `pnpm typecheck` | Lint / type-check su tutti i package |
-| `pnpm format` | Prettier write |
-| `pnpm db:migrate` | Prisma migrate dev |
-| `pnpm db:studio` | Prisma Studio |
-| `pnpm docker:up` / `pnpm docker:down` | Avvia/ferma Postgres+Redis |
+| Comando                               | Effetto                                 |
+| ------------------------------------- | --------------------------------------- |
+| `pnpm dev`                            | Avvia tutte le app in watch (Turborepo) |
+| `pnpm build`                          | Build di tutto il monorepo              |
+| `pnpm lint` / `pnpm typecheck`        | Lint / type-check su tutti i package    |
+| `pnpm format`                         | Prettier write                          |
+| `pnpm db:migrate`                     | Prisma migrate dev                      |
+| `pnpm db:studio`                      | Prisma Studio                           |
+| `pnpm docker:up` / `pnpm docker:down` | Avvia/ferma Postgres+Redis              |
 
 ## Roadmap
 
