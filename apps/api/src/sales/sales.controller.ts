@@ -23,6 +23,12 @@ export class SalesController {
     return this.sales.dashboardIncassi(user);
   }
 
+  /** KPI per venditore, filtrati per ruolo (i Sales vedono solo i propri). */
+  @Get('dashboard/kpi')
+  kpi(@CurrentUser() user: AuthUser) {
+    return this.sales.kpiVenditori(user);
+  }
+
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.sales.findOne(user, id);

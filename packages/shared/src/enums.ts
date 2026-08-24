@@ -123,3 +123,10 @@ export enum NotificationType {
   TICKET = 'TICKET',
   SISTEMA = 'SISTEMA',
 }
+
+/** Voci del calendario condiviso dello staff. */
+export enum AppuntamentoTipo {
+  CALL = 'CALL',
+  RIUNIONE = 'RIUNIONE',
+  ASSENZA = 'ASSENZA',
+}

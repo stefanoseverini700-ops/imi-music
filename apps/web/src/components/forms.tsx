@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { ArtistPlan, PaymentStatus, Role } from '@imi/shared';
+import { AppuntamentoTipo, ArtistPlan, PaymentStatus, Role } from '@imi/shared';
 import { authPatch, authPost } from '@/lib/api-client';
-import type { Artist, Lead } from '@/lib/dto';
+import type { Artist, Lead, User } from '@/lib/dto';
 
 const inputCls =
   'mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30';
@@ -189,6 +189,123 @@ export function NuovoUtenteForm({ onDone }: { onDone: () => void }) {
       <ErrorText error={error} />
       <button type="submit" disabled={loading} className={btnCls}>
         {loading ? 'Salvataggio…' : 'Crea utente'}
+      </button>
+    </form>
+  );
+}
+
+/** Form: nuova voce del calendario (call, riunione, assenza). */
+export function NuovoAppuntamentoForm({ users, onDone }: { users: User[]; onDone: () => void }) {
+  const [titolo, setTitolo] = useState('');
+  const [inizio, setInizio] = useState('');
+  const [tipo, setTipo] = useState<string>(AppuntamentoTipo.CALL);
+  const [userId, setUserId] = useState('');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await authPost('/api/calendario', {
+        titolo,
+        inizio: new Date(inizio).toISOString(),
+        tipo,
+        ...(userId ? { userId } : {}),
+        ...(note ? { note } : {}),
+      });
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label className={labelCls}>Titolo *</label>
+      <input
+        className={inputCls}
+        value={titolo}
+        onChange={(e) => setTitolo(e.target.value)}
+        placeholder="Call con Luna Nera"
+        required
+      />
+      <label className={labelCls}>Data e ora *</label>
+      <input
+        className={inputCls}
+        type="datetime-local"
+        value={inizio}
+        onChange={(e) => setInizio(e.target.value)}
+        required
+      />
+      <label className={labelCls}>Tipo</label>
+      <select className={inputCls} value={tipo} onChange={(e) => setTipo(e.target.value)}>
+        <option value={AppuntamentoTipo.CALL}>Call</option>
+        <option value={AppuntamentoTipo.RIUNIONE}>Riunione</option>
+        <option value={AppuntamentoTipo.ASSENZA}>Assenza</option>
+      </select>
+      {users.length > 0 && (
+        <>
+          <label className={labelCls}>Membro dello staff</label>
+          <select className={inputCls} value={userId} onChange={(e) => setUserId(e.target.value)}>
+            <option value="">Io</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nome}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
+      <label className={labelCls}>Note</label>
+      <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} />
+      <ErrorText error={error} />
+      <button type="submit" disabled={loading} className={btnCls}>
+        {loading ? 'Salvataggio…' : 'Aggiungi al calendario'}
+      </button>
+    </form>
+  );
+}
+
+/** Form: nuovo messaggio nella bacheca feedback. */
+export function NuovoFeedbackForm({ onDone }: { onDone: () => void }) {
+  const [testo, setTesto] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await authPost('/api/feedback', { testo });
+      onDone();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label className={labelCls}>Messaggio *</label>
+      <textarea
+        className={`${inputCls} min-h-[7rem]`}
+        value={testo}
+        onChange={(e) => setTesto(e.target.value)}
+        placeholder="Scrivi un feedback per il team…"
+        required
+        minLength={2}
+        maxLength={2000}
+      />
+      <ErrorText error={error} />
+      <button type="submit" disabled={loading} className={btnCls}>
+        {loading ? 'Pubblicazione…' : 'Pubblica'}
       </button>
     </form>
   );

@@ -19,6 +19,15 @@ export interface IncassiDashboard {
   perMese: { mese: string; totale: number }[];
 }
 
+export interface KpiVenditore {
+  venditoreId: string | null;
+  nome: string;
+  numeroVendite: number;
+  totale: number;
+  totaleMese: number;
+  ticketMedio: number;
+}
+
 @Injectable()
 export class SalesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -58,6 +67,47 @@ export class SalesService {
     const sale = await this.prisma.sale.findFirst({ where: { id, ...this.scope(user) } });
     if (!sale) throw new NotFoundException('Vendita non trovata');
     return sale;
+  }
+
+  /** KPI per venditore (Sprint 3): numero vendite, totale, totale mese, ticket medio. */
+  async kpiVenditori(user: AuthUser): Promise<KpiVenditore[]> {
+    const scope = this.scope(user);
+    const now = new Date();
+    const inizioMese = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [vendite, utenti] = await Promise.all([
+      this.prisma.sale.findMany({
+        where: scope,
+        select: { venditoreId: true, importo: true, data: true },
+      }),
+      this.prisma.user.findMany({
+        where: { tenantId: user.tenantId },
+        select: { id: true, nome: true },
+      }),
+    ]);
+
+    const nomePerId = new Map(utenti.map((u) => [u.id, u.nome]));
+    const acc = new Map<string, { n: number; totale: number; mese: number }>();
+
+    for (const v of vendite) {
+      const key = v.venditoreId ?? '';
+      const riga = acc.get(key) ?? { n: 0, totale: 0, mese: 0 };
+      riga.n += 1;
+      riga.totale += dec(v.importo);
+      if (v.data >= inizioMese) riga.mese += dec(v.importo);
+      acc.set(key, riga);
+    }
+
+    return [...acc.entries()]
+      .map(([id, r]) => ({
+        venditoreId: id || null,
+        nome: id ? (nomePerId.get(id) ?? 'Utente rimosso') : 'Non assegnato',
+        numeroVendite: r.n,
+        totale: r.totale,
+        totaleMese: r.mese,
+        ticketMedio: r.n > 0 ? Math.round((r.totale / r.n) * 100) / 100 : 0,
+      }))
+      .sort((a, b) => b.totale - a.totale);
   }
 
   /** Cruscotto incassi giornaliero/mensile (cfr. ARCHITETTURA.md §6, Sprint 2). */

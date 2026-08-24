@@ -49,6 +49,8 @@ model Tenant {
   events          Event[]
   releases        Release[]
   notifications   Notification[]
+  appuntamenti    Appuntamento[]
+  feedbacks       Feedback[]
 
   @@map("tenants")
 }
@@ -95,6 +97,8 @@ model User {
   notifications     Notification[]
   ticketMessages    TicketMessage[]
   fileCaricati      FileAsset[]     @relation("FileCaricatoDa")
+  appuntamenti      Appuntamento[]
+  feedbacks         Feedback[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -677,4 +681,48 @@ model Notification {
   @@index([tenantId])
   @@index([userId])
   @@map("notifications")
+}
+
+// -----------------------------------------------------------------------------
+// Calendario condiviso e bacheca feedback (Sprint 3)
+// -----------------------------------------------------------------------------
+
+enum AppuntamentoTipo {
+  CALL
+  RIUNIONE
+  ASSENZA
+}
+
+/// Voce del calendario staff: call con artisti/lead, riunioni, assenze.
+model Appuntamento {
+  id        String           @id @default(uuid()) @db.Uuid
+  tenantId  String           @db.Uuid
+  titolo    String
+  inizio    DateTime
+  tipo      AppuntamentoTipo @default(CALL)
+  userId    String?          @db.Uuid
+  note      String?
+  createdAt DateTime         @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([inizio])
+  @@map("appuntamenti")
+}
+
+/// Bacheca feedback interna al team.
+model Feedback {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  autoreId  String?  @db.Uuid
+  testo     String
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  autore User?  @relation(fields: [autoreId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@map("feedbacks")
 }

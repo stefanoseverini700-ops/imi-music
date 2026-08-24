@@ -4,11 +4,21 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { LeadStatus, Role } from '@imi/shared';
 import { authDelete, authGet, authPatch, getToken, logout } from '@/lib/api-client';
-import type { Artist, IncassiDashboard, Lead, User } from '@/lib/dto';
+import type {
+  Appuntamento,
+  Artist,
+  Feedback,
+  IncassiDashboard,
+  KpiVenditore,
+  Lead,
+  User,
+} from '@/lib/dto';
 import { Modal } from '@/components/Modal';
 import {
   ModificaLeadForm,
+  NuovoAppuntamentoForm,
   NuovoArtistaForm,
+  NuovoFeedbackForm,
   NuovoLeadForm,
   NuovoUtenteForm,
   NuovaVenditaForm,
@@ -24,7 +34,20 @@ const COLONNE: { stato: LeadStatus; label: string }[] = [
   { stato: LeadStatus.PERSO, label: 'Perso' },
 ];
 
-type ModalKind = 'lead' | 'vendita' | 'artista' | 'utente' | null;
+type ModalKind = 'lead' | 'vendita' | 'artista' | 'utente' | 'appuntamento' | 'feedback' | null;
+
+const DATA_ORA = new Intl.DateTimeFormat('it-IT', {
+  day: '2-digit',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+const TIPO_LABEL: Record<string, string> = {
+  CALL: '📞 Call',
+  RIUNIONE: '👥 Riunione',
+  ASSENZA: '🌴 Assenza',
+};
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -32,6 +55,9 @@ export default function DashboardPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [kpi, setKpi] = useState<KpiVenditore[]>([]);
+  const [agenda, setAgenda] = useState<Appuntamento[]>([]);
+  const [bacheca, setBacheca] = useState<Feedback[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalKind>(null);
   const [leadInModifica, setLeadInModifica] = useState<Lead | null>(null);
@@ -43,11 +69,17 @@ export default function DashboardPage() {
       authGet<IncassiDashboard>('/api/sales/dashboard/incassi'),
       authGet<Lead[]>('/api/leads'),
       authGet<Artist[]>('/api/artists'),
+      authGet<KpiVenditore[]>('/api/sales/dashboard/kpi'),
+      authGet<Appuntamento[]>('/api/calendario'),
+      authGet<Feedback[]>('/api/feedback'),
     ])
-      .then(([i, l, a]) => {
+      .then(([i, l, a, k, c, f]) => {
         setIncassi(i);
         setLeads(l);
         setArtists(a);
+        setKpi(k);
+        setAgenda(c);
+        setBacheca(f);
         setError(null);
       })
       .catch((e: Error) => {
@@ -115,6 +147,15 @@ export default function DashboardPage() {
     }
   }
 
+  async function eliminaAppuntamento(a: Appuntamento) {
+    try {
+      await authDelete(`/api/calendario/${a.id}`);
+      setAgenda((prev) => prev.filter((x) => x.id !== a.id));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   function chiudiEAggiorna() {
     setModal(null);
     setLeadInModifica(null);
@@ -136,6 +177,8 @@ export default function DashboardPage() {
           <BtnAzione onClick={() => setModal('vendita')}>➕ Vendita</BtnAzione>
           <BtnAzione onClick={() => setModal('artista')}>➕ Artista</BtnAzione>
           <BtnAzione onClick={() => setModal('utente')}>➕ Utente</BtnAzione>
+          <BtnAzione onClick={() => setModal('appuntamento')}>📅 Agenda</BtnAzione>
+          <BtnAzione onClick={() => setModal('feedback')}>💬 Feedback</BtnAzione>
           <button
             onClick={() => {
               logout();
@@ -184,6 +227,37 @@ export default function DashboardPage() {
           )}
         </div>
       </section>
+
+      {/* KPI per venditore */}
+      {kpi.length > 0 && (
+        <section className="mt-6 overflow-x-auto rounded-xl border border-white/10 p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
+            KPI per venditore
+          </h2>
+          <table className="mt-3 w-full min-w-[30rem] text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase text-white/40">
+                <th className="pb-2">Venditore</th>
+                <th className="pb-2 text-right">Vendite</th>
+                <th className="pb-2 text-right">Questo mese</th>
+                <th className="pb-2 text-right">Totale</th>
+                <th className="pb-2 text-right">Ticket medio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {kpi.map((k) => (
+                <tr key={k.venditoreId ?? 'nessuno'} className="border-t border-white/5">
+                  <td className="py-2 font-medium">{k.nome}</td>
+                  <td className="py-2 text-right text-white/70">{k.numeroVendite}</td>
+                  <td className="py-2 text-right text-white/70">{EUR.format(k.totaleMese)}</td>
+                  <td className="py-2 text-right font-semibold">{EUR.format(k.totale)}</td>
+                  <td className="py-2 text-right text-white/70">{EUR.format(k.ticketMedio)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {/* Kanban lead */}
       <section className="mt-8">
@@ -304,6 +378,66 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* Calendario e bacheca */}
+      <div className="mt-8 grid gap-4 lg:grid-cols-2">
+        <section className="rounded-xl border border-white/10 p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
+            Calendario ({agenda.length})
+          </h2>
+          {agenda.length === 0 ? (
+            <p className="mt-3 text-sm text-white/40">
+              Nessun appuntamento. Usa 📅 Agenda per aggiungerne uno.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {agenda.slice(0, 8).map((a) => (
+                <li
+                  key={a.id}
+                  className="flex items-start justify-between gap-3 rounded-lg bg-black/20 p-2 text-sm"
+                >
+                  <div>
+                    <p className="font-medium">{a.titolo}</p>
+                    <p className="text-xs text-white/50">
+                      {TIPO_LABEL[a.tipo] ?? a.tipo} · {DATA_ORA.format(new Date(a.inizio))}
+                      {a.user ? ` · ${a.user.nome}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => void eliminaAppuntamento(a)}
+                    aria-label={`Elimina ${a.titolo}`}
+                    className="rounded px-1 text-white/30 hover:bg-white/10 hover:text-red-400"
+                  >
+                    🗑
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-white/10 p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
+            Bacheca feedback ({bacheca.length})
+          </h2>
+          {bacheca.length === 0 ? (
+            <p className="mt-3 text-sm text-white/40">
+              Nessun messaggio. Usa 💬 Feedback per scriverne uno.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {bacheca.slice(0, 8).map((f) => (
+                <li key={f.id} className="rounded-lg bg-black/20 p-2 text-sm">
+                  <p className="whitespace-pre-wrap">{f.testo}</p>
+                  <p className="mt-1 text-xs text-white/40">
+                    {f.autore?.nome ?? 'Anonimo'} · {DATA_ORA.format(new Date(f.createdAt))}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
       {/* Artisti */}
       <section className="mt-8">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
@@ -376,6 +510,16 @@ export default function DashboardPage() {
       {modal === 'utente' && (
         <Modal title="Nuovo utente" onClose={() => setModal(null)}>
           <NuovoUtenteForm onDone={chiudiEAggiorna} />
+        </Modal>
+      )}
+      {modal === 'appuntamento' && (
+        <Modal title="Nuovo appuntamento" onClose={() => setModal(null)}>
+          <NuovoAppuntamentoForm users={users} onDone={chiudiEAggiorna} />
+        </Modal>
+      )}
+      {modal === 'feedback' && (
+        <Modal title="Nuovo feedback" onClose={() => setModal(null)}>
+          <NuovoFeedbackForm onDone={chiudiEAggiorna} />
         </Modal>
       )}
       {leadInModifica && (
