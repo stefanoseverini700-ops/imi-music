@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getHealth } from '@/lib/api';
 
 const MODULI = [
@@ -13,9 +14,22 @@ export default async function HomePage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
       <h1 className="text-3xl font-bold">Gestionale IMI Music</h1>
-      <p className="mt-2 text-white/60">
-        Scaffold Fase 0 (Sprint 0) — monolite modulare Next.js + NestJS + PostgreSQL.
-      </p>
+      <p className="mt-2 text-white/60">Monolite modulare Next.js + NestJS + PostgreSQL.</p>
+
+      <div className="mt-6 flex gap-3">
+        <Link
+          href="/login"
+          className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-400"
+        >
+          Accedi
+        </Link>
+        <Link
+          href="/dashboard"
+          className="rounded-lg border border-white/15 px-4 py-2 text-sm hover:bg-white/5"
+        >
+          Cruscotto
+        </Link>
+      </div>
 
       <section className="mt-8 rounded-lg border border-white/10 p-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">Stato API</h2>
