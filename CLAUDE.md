@@ -54,8 +54,8 @@ Implementato:
 - **Seed**: crea tenant di default + admin (`admin@imimusic.local` / `admin1234`,
   override con `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`).
 
-I moduli `delivery`, `ticketing`, `booking` sono ancora **stub** con un commento
-che indica lo sprint di riferimento. Vedi la roadmap in `ARCHITETTURA.md §6`.
+I moduli `ticketing` (Sprint 5) e `booking` (Sprint 9) sono ancora **stub** con
+un commento che indica lo sprint di riferimento. Vedi `ARCHITETTURA.md §6`.
 
 ## Architettura del monorepo
 
