@@ -1,12 +1,15 @@
 import { Module } from '@nestjs/common';
 
+import { SalesService } from './sales.service.js';
+import { SalesController } from './sales.controller.js';
+
 /**
- * Dominio Sales — skeleton (Sprint 0).
- * Sprint 2–3: lead a kanban, assegnazione lead, vendite, KPI venditore.
+ * Dominio Sales (Sprint 2): registrazione vendite e cruscotto incassi.
+ * La pipeline lead (kanban) è nel modulo Leads.
  */
 @Module({
-  imports: [],
-  controllers: [],
-  providers: [],
+  controllers: [SalesController],
+  providers: [SalesService],
+  exports: [SalesService],
 })
 export class SalesModule {}

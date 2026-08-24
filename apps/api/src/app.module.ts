@@ -11,6 +11,7 @@ import { RolesGuard } from './common/rbac/roles.guard.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { ArtistsModule } from './artists/artists.module.js';
+import { LeadsModule } from './leads/leads.module.js';
 import { SalesModule } from './sales/sales.module.js';
 import { DeliveryModule } from './delivery/delivery.module.js';
 import { TicketingModule } from './ticketing/ticketing.module.js';
@@ -23,6 +24,7 @@ import { BookingModule } from './booking/booking.module.js';
     AuthModule,
     UsersModule,
     ArtistsModule,
+    LeadsModule,
     SalesModule,
     DeliveryModule,
     TicketingModule,

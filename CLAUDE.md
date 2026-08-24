@@ -16,7 +16,7 @@ decisioni di design; se cambi il modello dati, tienilo allineato.
 
 ## Stato del progetto
 
-**Fase 0 / Sprint 0 completata** (scaffold) + **Sprint 1 in corso**.
+**Fase 0 / Sprint 0 completata** (scaffold) + **Sprint 1 completato** + **Sprint 2 in corso** (Sales).
 
 Implementato:
 
@@ -28,12 +28,18 @@ Implementato:
 - **CRUD Artisti** (`apps/api/src/artists`): isolato per tenant. Lettura staff
   interno (Admin/Sales/Operatori), scrittura solo Admin. Endpoint `/api/artists`
   (`GET`, `GET/:id`, `POST`, `PATCH/:id`, `DELETE/:id`).
+- **Sales — Leads** (`apps/api/src/leads`): pipeline kanban. CRUD, assegnazione
+  (solo Admin), cambio stato (`PATCH /:id/stato`). Visibilità per riga: Admin
+  vede tutti, Sales solo i propri. Endpoint sotto `/api/leads`.
+- **Sales — Vendite** (`apps/api/src/sales`): registrazione vendite + cruscotto
+  incassi (`GET /api/sales/dashboard/incassi`: oggi/mese/totale + serie
+  giornaliera e mensile). Visibilità: Admin tutte, Sales le proprie.
 - **Guard globali**: `JwtAuthGuard` (autenticazione) → `RolesGuard` (RBAC).
 - **Seed**: crea tenant di default + admin (`admin@imimusic.local` / `admin1234`,
   override con `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`).
 
-I moduli `sales`, `delivery`, `ticketing`, `booking` sono ancora **stub** con un
-commento che indica lo sprint di riferimento. Vedi la roadmap in `ARCHITETTURA.md §6`.
+I moduli `delivery`, `ticketing`, `booking` sono ancora **stub** con un commento
+che indica lo sprint di riferimento. Vedi la roadmap in `ARCHITETTURA.md §6`.
 
 ## Architettura del monorepo
 
