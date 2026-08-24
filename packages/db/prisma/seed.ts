@@ -42,15 +42,11 @@ async function main() {
   console.log(`✅ Seed completato — tenant "${tenant.nome}" (${tenant.id})`);
   console.log(`   Admin: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
 
-  // Dati demo (solo con SEED_DEMO=true), idempotenti: saltati se ci sono già artisti.
+  // Dati demo (solo con SEED_DEMO=true), idempotenti per sezione: ogni blocco
+  // (artisti, lead, vendite) viene inserito solo se manca — così un seed
+  // interrotto a metà si completa rieseguendo il comando.
   if (process.env.SEED_DEMO === 'true') {
-    const esistenti = await prisma.artist.count({ where: { tenantId: tenant.id } });
-    if (esistenti > 0) {
-      console.log('ℹ️  Dati demo già presenti, salto.');
-    } else {
-      await seedDemo(tenant.id, admin?.id ?? null);
-      console.log('✨ Dati demo inseriti (artisti, lead, vendite).');
-    }
+    await seedDemo(tenant.id, admin?.id ?? null);
   }
 }
 
@@ -66,9 +62,14 @@ async function seedDemo(tenantId: string, venditoreId: string | null) {
       piano: 'PRO' as const,
     },
   ];
-  const artisti = [];
-  for (const a of artistiData) {
-    artisti.push(await prisma.artist.create({ data: { tenantId, ...a } }));
+  let artisti = await prisma.artist.findMany({ where: { tenantId } });
+  if (artisti.length === 0) {
+    for (const a of artistiData) {
+      artisti.push(await prisma.artist.create({ data: { tenantId, ...a } }));
+    }
+    console.log(`✨ Demo: ${artisti.length} artisti inseriti.`);
+  } else {
+    console.log(`ℹ️  Demo: ${artisti.length} artisti già presenti, salto.`);
   }
 
   const leadData = [
@@ -85,8 +86,14 @@ async function seedDemo(tenantId: string, venditoreId: string | null) {
     { nome: 'Rialto Trio', fonte: 'Passaparola', stato: 'VINTO' as const, valoreStimato: 6000 },
     { nome: 'Echo Valley', fonte: 'Instagram', stato: 'PERSO' as const, valoreStimato: 900 },
   ];
-  for (const l of leadData) {
-    await prisma.lead.create({ data: { tenantId, assegnatoA: venditoreId, ...l } });
+  const leadEsistenti = await prisma.lead.count({ where: { tenantId } });
+  if (leadEsistenti === 0) {
+    for (const l of leadData) {
+      await prisma.lead.create({ data: { tenantId, assegnatoA: venditoreId, ...l } });
+    }
+    console.log(`✨ Demo: ${leadData.length} lead inseriti.`);
+  } else {
+    console.log(`ℹ️  Demo: ${leadEsistenti} lead già presenti, salto.`);
   }
 
   const now = new Date();
@@ -101,18 +108,24 @@ async function seedDemo(tenantId: string, venditoreId: string | null) {
     { importo: 4600, statoPagamento: 'PAGATO' as const, data: mkDate(0, 14) },
     { importo: 1500, statoPagamento: 'IN_ATTESA' as const, data: now },
   ];
-  for (let i = 0; i < venditeData.length; i++) {
-    const v = venditeData[i]!;
-    await prisma.sale.create({
-      data: {
-        tenantId,
-        artistId: artisti[i % artisti.length]!.id,
-        venditoreId,
-        importo: v.importo,
-        statoPagamento: v.statoPagamento,
-        data: v.data,
-      },
-    });
+  const venditeEsistenti = await prisma.sale.count({ where: { tenantId } });
+  if (venditeEsistenti === 0) {
+    for (let i = 0; i < venditeData.length; i++) {
+      const v = venditeData[i]!;
+      await prisma.sale.create({
+        data: {
+          tenantId,
+          artistId: artisti[i % artisti.length]!.id,
+          venditoreId,
+          importo: v.importo,
+          statoPagamento: v.statoPagamento,
+          data: v.data,
+        },
+      });
+    }
+    console.log(`✨ Demo: ${venditeData.length} vendite inserite.`);
+  } else {
+    console.log(`ℹ️  Demo: ${venditeEsistenti} vendite già presenti, salto.`);
   }
 }
 
