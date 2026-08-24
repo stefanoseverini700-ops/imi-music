@@ -19,6 +19,8 @@
     "db:generate": "pnpm --filter @imi/db generate",
     "db:migrate": "pnpm --filter @imi/db migrate:dev",
     "db:studio": "pnpm --filter @imi/db studio",
+    "db:seed": "pnpm --filter @imi/db seed",
+    "db:pulisci": "pnpm --filter @imi/db pulisci",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },

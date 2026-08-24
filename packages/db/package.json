@@ -18,6 +18,7 @@
     "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "pulisci": "dotenv -e ../../.env -- tsx prisma/pulisci-demo.ts",
     "lint": "eslint . --ignore-pattern generated"
   },
   "prisma": {

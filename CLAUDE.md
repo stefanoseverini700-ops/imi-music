@@ -33,7 +33,15 @@ Implementato:
   vede tutti, Sales solo i propri. Endpoint sotto `/api/leads`.
 - **Sales — Vendite** (`apps/api/src/sales`): registrazione vendite + cruscotto
   incassi (`GET /api/sales/dashboard/incassi`: oggi/mese/totale + serie
-  giornaliera e mensile). Visibilità: Admin tutte, Sales le proprie.
+  giornaliera e mensile) e **KPI per venditore**
+  (`GET /api/sales/dashboard/kpi`). Visibilità: Admin tutte, Sales le proprie.
+- **Calendario** (`apps/api/src/calendario`): voci condivise dello staff
+  (call/riunione/assenza). CRUD sotto `/api/calendario`.
+- **Bacheca feedback** (`apps/api/src/feedback`): messaggi interni al team.
+  L'autore elimina i propri, l'Admin qualsiasi. CRUD sotto `/api/feedback`.
+- **Frontend** (`apps/web`): login + cruscotto interattivo — creazione di lead,
+  vendite, artisti, utenti, appuntamenti e feedback; kanban con drag & drop,
+  modifica/eliminazione e assegnazione dei lead.
 - **Guard globali**: `JwtAuthGuard` (autenticazione) → `RolesGuard` (RBAC).
 - **Seed**: crea tenant di default + admin (`admin@imimusic.local` / `admin1234`,
   override con `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`).
@@ -84,7 +92,9 @@ cp .env.example .env
 pnpm docker:up                 # Postgres+PostGIS + Redis
 pnpm db:generate               # genera il client Prisma (necessario prima di build/typecheck)
 pnpm db:migrate                # prisma migrate dev
-pnpm --filter @imi/db seed     # tenant di default + admin
+pnpm db:seed                   # tenant di default + admin (SEED_DEMO=true aggiunge dati demo)
+pnpm db:pulisci                # anteprima svuotamento dati operativi
+pnpm db:pulisci -- --conferma  # svuota davvero (tenant e utenti restano)
 pnpm dev                       # web :3000 + api :4000
 pnpm lint && pnpm typecheck    # controlli
 ```
