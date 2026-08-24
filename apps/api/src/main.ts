@@ -8,11 +8,12 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors({ origin: process.env.NEXT_PUBLIC_APP_ORIGIN ?? '*' });
+  app.enableCors({ origin: process.env.CORS_ORIGIN ?? '*' });
 
-  const port = Number(process.env.API_PORT ?? 4000);
-  await app.listen(port);
-  Logger.log(`🚀 API IMI Music in ascolto su http://localhost:${port}/api`, 'Bootstrap');
+  // In hosting (Render/Railway) la porta arriva da PORT.
+  const port = Number(process.env.PORT ?? process.env.API_PORT ?? 4000);
+  await app.listen(port, '0.0.0.0');
+  Logger.log(`🚀 API IMI Music in ascolto sulla porta ${port} (prefisso /api)`, 'Bootstrap');
 }
 
 void bootstrap();

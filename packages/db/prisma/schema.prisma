@@ -7,20 +7,18 @@
 //  - Multi-tenant: `tenantId` sulle tabelle principali (aggregate root). Le
 //    tabelle figlie (SaleItem, DeliveryStage, JourneyPhase, ...) ereditano il
 //    tenant tramite la relazione col genitore, per evitare ridondanza.
-//  - PostGIS è abilitato come extension: le colonne geometry per la mappa
-//    geolocalizzata (Booking, Sprint 9) sostituiranno lat/lng float quando
-//    serviranno query spaziali. Per ora lat/lng restano Float come nell'ER.
+//  - Geo: per ora lat/lng sono Float (come nell'ER). La mappa geolocalizzata
+//    (Booking, Sprint 9) introdurrà l'extension PostGIS e colonne geometry;
+//    finché non serve, lo schema resta deployabile su qualsiasi Postgres.
 // =============================================================================
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  extensions = [postgis]
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // -----------------------------------------------------------------------------

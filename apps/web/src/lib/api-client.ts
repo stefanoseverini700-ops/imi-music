@@ -1,6 +1,8 @@
 'use client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+// Vuoto = chiamate same-origin (/api/...), inoltrate all'API dal proxy di Next
+// (vedi next.config.mjs → rewrites). Evita problemi di CORS in produzione.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 const ACCESS_KEY = 'imi_access';
 const REFRESH_KEY = 'imi_refresh';

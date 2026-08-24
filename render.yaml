@@ -1,0 +1,70 @@
+# Blueprint Render per IMI Music (Postgres + API NestJS + Web Next.js).
+# Deploy: render.com → New → Blueprint → seleziona il repo imi-music → Apply.
+databases:
+  - name: imi-db
+    databaseName: imi_music
+    user: imi
+    plan: free
+
+services:
+  # --- API (NestJS) ---
+  - type: web
+    name: imi-api
+    runtime: node
+    plan: free
+    healthCheckPath: /api/health
+    buildCommand: >-
+      npm install -g pnpm@9.12.0 &&
+      pnpm install --frozen-lockfile --prod=false &&
+      pnpm --filter @imi/db generate &&
+      pnpm --filter @imi/shared build &&
+      pnpm --filter @imi/db build &&
+      pnpm --filter @imi/api build
+    startCommand: >-
+      pnpm --filter @imi/db exec prisma migrate deploy &&
+      pnpm --filter @imi/db seed &&
+      pnpm --filter @imi/api start
+    envVars:
+      - key: NODE_VERSION
+        value: '20'
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: imi-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 7d
+      - key: DEFAULT_TENANT_ID
+        value: 00000000-0000-0000-0000-000000000000
+      - key: SEED_DEMO
+        value: 'true'
+
+  # --- Web (Next.js) ---
+  - type: web
+    name: imi-web
+    runtime: node
+    plan: free
+    buildCommand: >-
+      npm install -g pnpm@9.12.0 &&
+      pnpm install --frozen-lockfile --prod=false &&
+      pnpm --filter @imi/shared build &&
+      pnpm --filter @imi/web build
+    startCommand: pnpm --filter @imi/web start
+    envVars:
+      - key: NODE_VERSION
+        value: '20'
+      - key: NODE_ENV
+        value: production
+      # Origine dell'API: il web fa da proxy verso questo host (vedi next.config.mjs).
+      - key: API_ORIGIN
+        fromService:
+          name: imi-api
+          type: web
+          property: host

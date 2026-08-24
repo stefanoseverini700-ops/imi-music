@@ -1,4 +1,10 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+// getHealth gira server-side (Server Component): usa l'origine interna dell'API.
+function apiOrigin() {
+  const raw = process.env.API_ORIGIN;
+  if (!raw) return 'http://localhost:4000';
+  return /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
+}
+const API_URL = apiOrigin();
 
 export type HealthResponse = {
   status: string;
