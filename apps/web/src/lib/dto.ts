@@ -1,6 +1,10 @@
 // Tipi delle risposte API usati dal frontend.
 import type {
   AppuntamentoTipo,
+  FileAssetType,
+  FileOwnerType,
+  TicketPriority,
+  TicketStatus,
   DeliveryPlanStatus,
   LeadStatus,
   ReleaseStatus,
@@ -123,4 +127,47 @@ export interface Artist {
   citta: string | null;
   genereMusicale: string | null;
   piano: string;
+}
+
+export interface Dipartimento {
+  id: string;
+  nome: string;
+}
+
+export interface Ticket {
+  id: string;
+  oggetto: string;
+  stato: TicketStatus;
+  priorita: TicketPriority;
+  slaScadenza: string | null;
+  createdAt: string;
+  department: { id: string; nome: string } | null;
+  creatore: { id: string; nome: string } | null;
+  assegnato: { id: string; nome: string } | null;
+  artist: { id: string; nome: string } | null;
+  _count?: { messages: number };
+}
+
+export interface TicketMessaggio {
+  id: string;
+  testo: string;
+  creatoIl: string;
+  autore: { id: string; nome: string } | null;
+}
+
+export interface TicketDettaglio extends Ticket {
+  messages: TicketMessaggio[];
+}
+
+export interface FileAsset {
+  id: string;
+  nomeFile: string;
+  url: string;
+  tipo: FileAssetType;
+  ownerType: FileOwnerType;
+  ownerId: string;
+  versione: number;
+  createdAt: string;
+  caricatore: { id: string; nome: string } | null;
+  department: { id: string; nome: string } | null;
 }

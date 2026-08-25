@@ -16,7 +16,7 @@ decisioni di design; se cambi il modello dati, tienilo allineato.
 
 ## Stato del progetto
 
-**Fase 0 (Sprint 0) completata** + **Sprint 1, 2, 3 e 4 completati**.
+**Fase 0 (Sprint 0) completata** + **Sprint 1, 2, 3, 4 e 5 completati**.
 
 Implementato:
 
@@ -47,15 +47,26 @@ Implementato:
   (gli Operatori vedono solo i propri). Rotte sotto `/api/delivery`.
 - **Release + Label Copy** (`apps/api/src/releases`): discografia con scheda
   metadati (`PUT /api/releases/:id/label-copy`).
-- **Frontend** (`apps/web`): `/dashboard` (cruscotto Sales) e `/delivery`
-  (servizi, piani, task, release). Creazione da modali, kanban lead con
-  drag & drop, slider di avanzamento delle fasi, kanban task.
+- **Ticketing** (`apps/api/src/ticketing`): dipartimenti, ticket con thread di
+  messaggi e SLA 48h, assegnazione e cambio stato. Visibilità per riga: Admin
+  tutto; staff il proprio dipartimento, i creati o gli assegnati; Artisti solo
+  i propri. Rotte sotto `/api/ticketing`.
+- **Area file** (`apps/api/src/files`): upload reale (multer → cartella
+  `UPLOAD_DIR`, default `./uploads`), cartelle per dipartimento, download
+  autenticato (`GET /api/files/:id/download`), oppure registrazione di link
+  esterni (`POST /api/files/collega`). **In produzione questo strato va
+  sostituito con object storage S3/R2** — è l'unico punto da cambiare.
+- **Frontend** (`apps/web`): `/dashboard` (cruscotto Sales), `/delivery`
+  (servizi, piani, task, release) e `/ticketing` (ticket, area file, cartelle).
+  Creazione da modali, kanban lead con drag & drop, slider di avanzamento
+  delle fasi, kanban task.
 - **Guard globali**: `JwtAuthGuard` (autenticazione) → `RolesGuard` (RBAC).
 - **Seed**: crea tenant di default + admin (`admin@imimusic.local` / `admin1234`,
   override con `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`).
 
-I moduli `ticketing` (Sprint 5) e `booking` (Sprint 9) sono ancora **stub** con
-un commento che indica lo sprint di riferimento. Vedi `ARCHITETTURA.md §6`.
+Il modulo `booking` (Sprint 9) è ancora uno **stub**. Manca dell'MVP lo
+Sprint 6 (portale artista in sola lettura, notifiche email, go-live).
+Vedi `ARCHITETTURA.md §6`.
 
 ## Architettura del monorepo
 

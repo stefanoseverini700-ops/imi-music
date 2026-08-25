@@ -16,9 +16,10 @@ import { SalesModule } from './sales/sales.module.js';
 import { CalendarioModule } from './calendario/calendario.module.js';
 import { FeedbackModule } from './feedback/feedback.module.js';
 import { ServiziModule } from './servizi/servizi.module.js';
+import { TicketingModule } from './ticketing/ticketing.module.js';
+import { FilesModule } from './files/files.module.js';
 import { ReleasesModule } from './releases/releases.module.js';
 import { DeliveryModule } from './delivery/delivery.module.js';
-import { TicketingModule } from './ticketing/ticketing.module.js';
 import { BookingModule } from './booking/booking.module.js';
 
 @Module({
@@ -35,8 +36,9 @@ import { BookingModule } from './booking/booking.module.js';
     FeedbackModule,
     ServiziModule,
     ReleasesModule,
-    DeliveryModule,
     TicketingModule,
+    FilesModule,
+    DeliveryModule,
     BookingModule,
   ],
   controllers: [HealthController],

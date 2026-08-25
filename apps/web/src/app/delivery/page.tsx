@@ -135,6 +135,12 @@ export default function DeliveryPage() {
           >
             ← Cruscotto
           </Link>
+          <Link
+            href="/ticketing"
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-sm hover:bg-white/5"
+          >
+            Ticketing →
+          </Link>
           <Btn onClick={() => setModal('servizio')}>➕ Servizio</Btn>
           <Btn onClick={() => setModal('piano')}>➕ Piano</Btn>
           <Btn onClick={() => setModal('task')}>➕ Task</Btn>

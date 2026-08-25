@@ -35,6 +35,15 @@ async function main() {
     },
   });
 
+  // Dipartimenti di default per il ticketing e le cartelle condivise (Sprint 5).
+  const DIPARTIMENTI = ['Produzione', 'Grafica', 'Video', 'Foto', 'SMM', 'Amministrazione'];
+  for (const nome of DIPARTIMENTI) {
+    const esiste = await prisma.department.findFirst({ where: { tenantId: tenant.id, nome } });
+    if (!esiste) {
+      await prisma.department.create({ data: { tenantId: tenant.id, nome } });
+    }
+  }
+
   const admin = await prisma.user.findUnique({
     where: { tenantId_email: { tenantId: tenant.id, email: ADMIN_EMAIL } },
   });

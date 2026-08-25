@@ -95,3 +95,33 @@ export function authPut<T>(path: string, body: unknown): Promise<T> {
 export function authDelete<T>(path: string): Promise<T> {
   return authFetch<T>(path, 'DELETE');
 }
+
+/** Upload di un file con metadati (multipart/form-data). */
+export async function authUpload<T>(path: string, form: FormData): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    // Nessun Content-Type: lo imposta il browser con il boundary corretto.
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (res.status === 401) throw new Error('unauthorized');
+  if (!res.ok) {
+    let msg = `Errore ${res.status}`;
+    try {
+      const data = (await res.json()) as { message?: string | string[] };
+      if (data?.message) {
+        msg = Array.isArray(data.message) ? data.message.join(' · ') : String(data.message);
+      }
+    } catch {
+      /* corpo non-JSON */
+    }
+    throw new Error(msg);
+  }
+  return (await res.json()) as T;
+}
+
+/** URL di download di un file (passa dall'API, che applica i permessi). */
+export function urlDownload(id: string): string {
+  return `${API_URL}/api/files/${id}/download`;
+}

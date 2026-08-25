@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 
-/**
- * Dominio Ticketing — skeleton (Sprint 0).
- * Sprint 5: ticketing interno per dipartimento + area file condivisa.
- */
+import { TicketingService } from './ticketing.service.js';
+import { TicketingController } from './ticketing.controller.js';
+
+/** Dominio Ticketing (Sprint 5): dipartimenti, ticket, messaggi. */
 @Module({
-  imports: [],
-  controllers: [],
-  providers: [],
+  controllers: [TicketingController],
+  providers: [TicketingService],
+  exports: [TicketingService],
 })
 export class TicketingModule {}

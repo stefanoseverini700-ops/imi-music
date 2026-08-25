@@ -33,3 +33,6 @@ Thumbs.db
 # Test / coverage
 coverage/
 *.tsbuildinfo
+
+# File caricati in locale (in produzione: object storage S3/R2)
+uploads/

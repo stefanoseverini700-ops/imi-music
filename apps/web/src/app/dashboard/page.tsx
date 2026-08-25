@@ -186,6 +186,12 @@ export default function DashboardPage() {
           >
             Delivery →
           </Link>
+          <Link
+            href="/ticketing"
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-sm hover:bg-white/5"
+          >
+            Ticketing →
+          </Link>
           <button
             onClick={() => {
               logout();
