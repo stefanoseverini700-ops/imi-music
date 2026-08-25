@@ -13,7 +13,15 @@ import {
   logout,
   urlDownload,
 } from '@/lib/api-client';
-import type { Artist, Dipartimento, FileAsset, Ticket, TicketDettaglio, User } from '@/lib/dto';
+import type {
+  AppConfig,
+  Artist,
+  Dipartimento,
+  FileAsset,
+  Ticket,
+  TicketDettaglio,
+  User,
+} from '@/lib/dto';
 import { Modal } from '@/components/Modal';
 import {
   CaricaFileForm,
@@ -57,6 +65,7 @@ export default function TicketingPage() {
   const [aperto, setAperto] = useState<TicketDettaglio | null>(null);
   const [risposta, setRisposta] = useState('');
   const [filtroCartella, setFiltroCartella] = useState('');
+  const [config, setConfig] = useState<AppConfig | null>(null);
 
   const refresh = useCallback(() => {
     Promise.all([
@@ -79,6 +88,9 @@ export default function TicketingPage() {
     authGet<User[]>('/api/users')
       .then(setUsers)
       .catch(() => setUsers([]));
+    authGet<AppConfig>('/api/config')
+      .then(setConfig)
+      .catch(() => setConfig(null));
   }, [router]);
 
   useEffect(() => {
@@ -251,6 +263,13 @@ export default function TicketingPage() {
 
       {/* Area file */}
       <section className="mt-8">
+        {config?.avvisoFileTemporanei && (
+          <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+            ⚠️ <strong>Archiviazione temporanea.</strong> I file caricati qui vengono persi a ogni
+            riavvio del servizio. Durante la fase di prova tenete sempre una copia altrove: non
+            usate quest&apos;area come archivio definitivo.
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
             Area file ({fileFiltrati.length})

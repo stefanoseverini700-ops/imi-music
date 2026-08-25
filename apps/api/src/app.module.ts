@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 
 import { PrismaModule } from './prisma/prisma.module.js';
 import { HealthController } from './health/health.controller.js';
+import { ConfigController } from './health/config.controller.js';
 import { JwtAuthGuard } from './common/rbac/jwt-auth.guard.js';
 import { RolesGuard } from './common/rbac/roles.guard.js';
 
@@ -45,7 +46,7 @@ import { BookingModule } from './booking/booking.module.js';
     DeliveryModule,
     BookingModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, ConfigController],
   providers: [
     // Ordine dei guard globali: prima autenticazione (JWT), poi RBAC per ruolo.
     // Le route pubbliche si marcano con @Public().

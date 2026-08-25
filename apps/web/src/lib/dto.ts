@@ -208,3 +208,8 @@ export interface PortalePanoramica {
   tickets: Ticket[];
   eventi: PortaleEvento[];
 }
+
+export interface AppConfig {
+  storagePersistente: boolean;
+  avvisoFileTemporanei: boolean;
+}
