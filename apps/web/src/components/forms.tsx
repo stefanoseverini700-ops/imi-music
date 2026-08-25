@@ -449,3 +449,74 @@ export function NuovoArtistaForm({ users = [], onDone }: { users?: User[]; onDon
     </form>
   );
 }
+
+/** Form: cambio della propria password (disponibile a ogni ruolo). */
+export function CambiaPasswordForm({ onDone }: { onDone: () => void }) {
+  const [attuale, setAttuale] = useState('');
+  const [nuova, setNuova] = useState('');
+  const [conferma, setConferma] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (nuova !== conferma) {
+      setError('Le due password nuove non coincidono');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      await authPatch('/api/users/me/password', {
+        passwordAttuale: attuale,
+        passwordNuova: nuova,
+      });
+      setOk(true);
+      setTimeout(onDone, 1200);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (ok) {
+    return <p className="text-sm text-green-400">✅ Password aggiornata.</p>;
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label className={labelCls}>Password attuale *</label>
+      <input
+        className={inputCls}
+        type="password"
+        value={attuale}
+        onChange={(e) => setAttuale(e.target.value)}
+        required
+      />
+      <label className={labelCls}>Nuova password * (min. 8 caratteri)</label>
+      <input
+        className={inputCls}
+        type="password"
+        minLength={8}
+        value={nuova}
+        onChange={(e) => setNuova(e.target.value)}
+        required
+      />
+      <label className={labelCls}>Ripeti la nuova password *</label>
+      <input
+        className={inputCls}
+        type="password"
+        minLength={8}
+        value={conferma}
+        onChange={(e) => setConferma(e.target.value)}
+        required
+      />
+      <ErrorText error={error} />
+      <button type="submit" disabled={loading} className={btnCls}>
+        {loading ? 'Salvataggio…' : 'Cambia password'}
+      </button>
+    </form>
+  );
+}

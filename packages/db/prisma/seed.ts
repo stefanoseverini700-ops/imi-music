@@ -9,7 +9,12 @@ const prisma = new PrismaClient();
 
 const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID ?? '00000000-0000-0000-0000-000000000000';
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@imimusic.local';
-const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'admin1234';
+// Se la password non è impostata si usa quella di sviluppo, MA solo alla
+// creazione: un admin già esistente non viene mai reimpostato senza che
+// SEED_ADMIN_PASSWORD sia esplicita. Così il seed può girare a ogni deploy
+// senza riportare l'account a una password nota.
+const PASSWORD_ESPLICITA = process.env.SEED_ADMIN_PASSWORD;
+const ADMIN_PASSWORD = PASSWORD_ESPLICITA ?? 'admin1234';
 
 async function main() {
   const tenant = await prisma.tenant.upsert({
@@ -23,17 +28,31 @@ async function main() {
   });
 
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
-  await prisma.user.upsert({
+  const adminEsistente = await prisma.user.findUnique({
     where: { tenantId_email: { tenantId: tenant.id, email: ADMIN_EMAIL } },
-    update: { passwordHash },
-    create: {
-      tenantId: tenant.id,
-      nome: 'Admin',
-      email: ADMIN_EMAIL,
-      ruolo: Role.ADMIN,
-      passwordHash,
-    },
+    select: { id: true },
   });
+
+  if (!adminEsistente) {
+    await prisma.user.create({
+      data: {
+        tenantId: tenant.id,
+        nome: 'Admin',
+        email: ADMIN_EMAIL,
+        ruolo: Role.ADMIN,
+        passwordHash,
+      },
+    });
+    if (!PASSWORD_ESPLICITA && process.env.NODE_ENV === 'production') {
+      console.warn(
+        '⚠️  Admin creato con la password di sviluppo: imposta SEED_ADMIN_PASSWORD e cambiala subito.',
+      );
+    }
+  } else if (PASSWORD_ESPLICITA) {
+    // Reimposta la password solo se richiesto esplicitamente.
+    await prisma.user.update({ where: { id: adminEsistente.id }, data: { passwordHash } });
+    console.log('🔑 Password admin reimpostata da SEED_ADMIN_PASSWORD.');
+  }
 
   // Dipartimenti di default per il ticketing e le cartelle condivise (Sprint 5).
   const DIPARTIMENTI = ['Produzione', 'Grafica', 'Video', 'Foto', 'SMM', 'Amministrazione'];
@@ -49,7 +68,7 @@ async function main() {
   });
 
   console.log(`✅ Seed completato — tenant "${tenant.nome}" (${tenant.id})`);
-  console.log(`   Admin: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
+  console.log(`   Admin: ${ADMIN_EMAIL}${PASSWORD_ESPLICITA ? '' : ` / ${ADMIN_PASSWORD}`}`);
 
   // Dati demo (solo con SEED_DEMO=true), idempotenti per sezione: ogni blocco
   // (artisti, lead, vendite) viene inserito solo se manca — così un seed

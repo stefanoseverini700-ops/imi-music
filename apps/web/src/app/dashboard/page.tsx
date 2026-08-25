@@ -23,6 +23,7 @@ import {
   NuovoLeadForm,
   NuovoUtenteForm,
   NuovaVenditaForm,
+  CambiaPasswordForm,
 } from '@/components/forms';
 
 const EUR = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
@@ -35,7 +36,8 @@ const COLONNE: { stato: LeadStatus; label: string }[] = [
   { stato: LeadStatus.PERSO, label: 'Perso' },
 ];
 
-type ModalKind = 'lead' | 'vendita' | 'artista' | 'utente' | 'appuntamento' | 'feedback' | null;
+type ModalKind =
+  'lead' | 'vendita' | 'artista' | 'utente' | 'appuntamento' | 'feedback' | 'password' | null;
 
 const DATA_ORA = new Intl.DateTimeFormat('it-IT', {
   day: '2-digit',
@@ -192,6 +194,13 @@ export default function DashboardPage() {
           >
             Ticketing →
           </Link>
+          <button
+            onClick={() => setModal('password')}
+            title="Cambia password"
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-sm hover:bg-white/5"
+          >
+            🔑
+          </button>
           <button
             onClick={() => {
               logout();
@@ -533,6 +542,11 @@ export default function DashboardPage() {
       {modal === 'feedback' && (
         <Modal title="Nuovo feedback" onClose={() => setModal(null)}>
           <NuovoFeedbackForm onDone={chiudiEAggiorna} />
+        </Modal>
+      )}
+      {modal === 'password' && (
+        <Modal title="Cambia password" onClose={() => setModal(null)}>
+          <CambiaPasswordForm onDone={() => setModal(null)} />
         </Modal>
       )}
       {leadInModifica && (

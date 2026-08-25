@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { authGet, getToken, logout, urlDownload } from '@/lib/api-client';
 import type { Notifica, PortalePanoramica } from '@/lib/dto';
+import { Modal } from '@/components/Modal';
+import { CambiaPasswordForm } from '@/components/forms';
 
 const DATA = new Intl.DateTimeFormat('it-IT', {
   day: '2-digit',
@@ -16,6 +18,7 @@ export default function PortalePage() {
   const [dati, setDati] = useState<PortalePanoramica | null>(null);
   const [notifiche, setNotifiche] = useState<Notifica[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [cambioPassword, setCambioPassword] = useState(false);
 
   const refresh = useCallback(() => {
     authGet<PortalePanoramica>('/api/portale')
@@ -65,6 +68,13 @@ export default function PortalePage() {
               🔔 {nonLette}
             </span>
           )}
+          <button
+            onClick={() => setCambioPassword(true)}
+            title="Cambia password"
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-sm hover:bg-white/5"
+          >
+            🔑
+          </button>
           <button
             onClick={() => {
               logout();
@@ -271,6 +281,11 @@ export default function PortalePage() {
             </section>
           )}
         </>
+      )}
+      {cambioPassword && (
+        <Modal title="Cambia password" onClose={() => setCambioPassword(false)}>
+          <CambiaPasswordForm onDone={() => setCambioPassword(false)} />
+        </Modal>
       )}
     </main>
   );

@@ -4,6 +4,14 @@ CRM/ERP ibrido per agenzia musicale — domini **Sales**, **Delivery**, **Ticket
 
 > Il blueprint tecnico completo (stack, RBAC, schema ER, roadmap a sprint) è in [`ARCHITETTURA.md`](./ARCHITETTURA.md).
 
+**Documentazione pratica**
+
+| Documento                          | Per chi                                                   |
+| ---------------------------------- | --------------------------------------------------------- |
+| [`GUIDA-TEAM.md`](./GUIDA-TEAM.md) | Chi usa il gestionale: schermate, ruoli, da dove iniziare |
+| [`DEPLOY.md`](./DEPLOY.md)         | Mettere l'app online su Render, passo per passo           |
+| [`COLLAUDO.md`](./COLLAUDO.md)     | Checklist di prova (UAT) prima di chiudere la Fase 1      |
+
 ## Stack
 
 | Area     | Tecnologie                                                               |

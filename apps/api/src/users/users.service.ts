@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -51,6 +56,19 @@ export class UsersService {
     });
     if (!user) throw new NotFoundException('Utente non trovato');
     return user;
+  }
+
+  /** Cambio password del proprio account: richiede quella attuale. */
+  async cambiaPassword(userId: string, attuale: string, nuova: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.passwordHash) throw new NotFoundException('Utente non trovato');
+
+    const ok = await bcrypt.compare(attuale, user.passwordHash);
+    if (!ok) throw new UnauthorizedException('Password attuale non corretta');
+
+    const passwordHash = await bcrypt.hash(nuova, SALT_ROUNDS);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    return { aggiornata: true };
   }
 
   /** Colonne esposte: mai `passwordHash`. */

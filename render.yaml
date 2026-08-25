@@ -1,10 +1,15 @@
-# Blueprint Render per IMI Music (Postgres + API NestJS + Web Next.js).
-# Deploy: render.com → New → Blueprint → seleziona il repo imi-music → Apply.
-databases:
-  - name: imi-db
-    databaseName: imi_music
-    user: imi
-    plan: free
+# Blueprint Render per IMI Music (API NestJS + Web Next.js).
+#
+# Il database NON viene creato qui: si usa lo stesso PostgreSQL (Neon) già in
+# uso in locale, così i dati sono gli stessi da PC e da telefono. La stringa di
+# connessione va incollata a mano nel pannello Render (è marcata `sync: false`,
+# quindi non finisce mai nel repository).
+#
+# Deploy: render.com → New → Blueprint → repo imi-music → Apply.
+#
+# ⚠️ File caricati: sul piano free il disco di Render è effimero (i file si
+# perdono a ogni riavvio). Per l'area file in produzione serve un disco
+# persistente (piano a pagamento) oppure object storage S3/R2.
 
 services:
   # --- API (NestJS) ---
@@ -29,10 +34,10 @@ services:
         value: '20'
       - key: NODE_ENV
         value: production
+      # Stessa stringa di connessione Neon usata in locale (senza -pooler).
+      # Da incollare nel pannello Render: Environment → DATABASE_URL.
       - key: DATABASE_URL
-        fromDatabase:
-          name: imi-db
-          property: connectionString
+        sync: false
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
@@ -43,8 +48,19 @@ services:
         value: 7d
       - key: DEFAULT_TENANT_ID
         value: 00000000-0000-0000-0000-000000000000
+      # Dati reali: nessun dato demo in produzione.
       - key: SEED_DEMO
-        value: 'true'
+        value: 'false'
+      # Password dell'admin creato/aggiornato dal seed a ogni avvio.
+      # Impostala nel pannello Render prima del primo deploy.
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      # Email transazionale (facoltativa): senza chiave le notifiche
+      # restano solo in-app.
+      - key: RESEND_API_KEY
+        sync: false
 
   # --- Web (Next.js) ---
   - type: web
@@ -62,7 +78,7 @@ services:
         value: '20'
       - key: NODE_ENV
         value: production
-      # Origine dell'API: il web fa da proxy verso questo host (vedi next.config.mjs).
+      # Origine dell'API: il web fa da proxy verso questo host (next.config.mjs).
       - key: API_ORIGIN
         fromService:
           name: imi-api
