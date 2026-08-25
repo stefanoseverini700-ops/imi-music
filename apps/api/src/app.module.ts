@@ -18,6 +18,8 @@ import { FeedbackModule } from './feedback/feedback.module.js';
 import { ServiziModule } from './servizi/servizi.module.js';
 import { TicketingModule } from './ticketing/ticketing.module.js';
 import { FilesModule } from './files/files.module.js';
+import { NotificheModule } from './notifiche/notifiche.module.js';
+import { PortaleModule } from './portale/portale.module.js';
 import { ReleasesModule } from './releases/releases.module.js';
 import { DeliveryModule } from './delivery/delivery.module.js';
 import { BookingModule } from './booking/booking.module.js';
@@ -38,6 +40,8 @@ import { BookingModule } from './booking/booking.module.js';
     ReleasesModule,
     TicketingModule,
     FilesModule,
+    NotificheModule,
+    PortaleModule,
     DeliveryModule,
     BookingModule,
   ],

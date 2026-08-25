@@ -33,6 +33,18 @@ export function logout() {
   }
 }
 
+/** Ruolo dell'utente autenticato, letto dal payload del token. */
+export function ruoloCorrente(): string | null {
+  const t = getToken();
+  if (!t) return null;
+  try {
+    const payload = JSON.parse(atob(t.split('.')[1] ?? '')) as { ruolo?: string };
+    return payload.ruolo ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function login(email: string, password: string): Promise<void> {
   const res = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST',

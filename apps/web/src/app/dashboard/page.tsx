@@ -517,7 +517,7 @@ export default function DashboardPage() {
       )}
       {modal === 'artista' && (
         <Modal title="Nuovo artista" onClose={() => setModal(null)}>
-          <NuovoArtistaForm onDone={chiudiEAggiorna} />
+          <NuovoArtistaForm users={users} onDone={chiudiEAggiorna} />
         </Modal>
       )}
       {modal === 'utente' && (

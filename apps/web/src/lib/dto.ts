@@ -171,3 +171,40 @@ export interface FileAsset {
   caricatore: { id: string; nome: string } | null;
   department: { id: string; nome: string } | null;
 }
+
+export interface Notifica {
+  id: string;
+  tipo: string;
+  testo: string | null;
+  letto: boolean;
+  createdAt: string;
+}
+
+export interface PortalePiano {
+  id: string;
+  stato: string;
+  avanzamento: number;
+  fasi: { id: string; nome: string; categoria: string; percentuale: number }[];
+}
+
+export interface PortaleEvento {
+  id: string;
+  data: string;
+  stato: string;
+  venue: { nome: string; citta: string | null } | null;
+}
+
+export interface PortalePanoramica {
+  artista: {
+    id: string;
+    nome: string;
+    citta: string | null;
+    genereMusicale: string | null;
+    piano: string;
+  };
+  piani: PortalePiano[];
+  releases: Release[];
+  files: FileAsset[];
+  tickets: Ticket[];
+  eventi: PortaleEvento[];
+}

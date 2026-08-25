@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { login } from '@/lib/api-client';
+import { login, ruoloCorrente } from '@/lib/api-client';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,7 +17,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
-      router.push('/dashboard');
+      // Gli artisti entrano nel portale in sola lettura, lo staff nel cruscotto.
+      router.push(ruoloCorrente() === 'ARTISTA' ? '/portale' : '/dashboard');
     } catch {
       setError('Credenziali non valide');
     } finally {

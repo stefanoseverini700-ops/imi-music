@@ -16,7 +16,7 @@ decisioni di design; se cambi il modello dati, tienilo allineato.
 
 ## Stato del progetto
 
-**Fase 0 (Sprint 0) completata** + **Sprint 1, 2, 3, 4 e 5 completati**.
+**Fase 1 (MVP) completata**: Sprint 0 → 6 tutti implementati.
 
 Implementato:
 
@@ -56,17 +56,28 @@ Implementato:
   autenticato (`GET /api/files/:id/download`), oppure registrazione di link
   esterni (`POST /api/files/collega`). **In produzione questo strato va
   sostituito con object storage S3/R2** — è l'unico punto da cambiare.
+- **Notifiche** (`apps/api/src/notifiche`): modulo **globale** — qualsiasi
+  dominio può iniettare `NotificheService.notifica()`. Crea la notifica in-app
+  e invia l'email via **Resend** se `RESEND_API_KEY` è impostata, altrimenti
+  logga. È best-effort: non solleva mai, per non far fallire l'operazione
+  applicativa. Agganciata a: nuovo messaggio su ticket, ticket assegnato,
+  task assegnato. Rotte sotto `/api/notifiche`.
+- **Portale artista** (`apps/api/src/portale`): `GET /api/portale` — vista in
+  **sola lettura** dei propri dati (servizi con avanzamento, uscite, materiale,
+  richieste, proposte live). Riservato al ruolo `ARTISTA` e risolto tramite
+  `Artist.userId`. Non espone altri artisti, KPI interni o prezzi di listino.
 - **Frontend** (`apps/web`): `/dashboard` (cruscotto Sales), `/delivery`
-  (servizi, piani, task, release) e `/ticketing` (ticket, area file, cartelle).
-  Creazione da modali, kanban lead con drag & drop, slider di avanzamento
-  delle fasi, kanban task.
+  (servizi, piani, task, release), `/ticketing` (ticket, area file, cartelle) e
+  `/portale` (vista artista). Il login instrada per ruolo: gli Artisti al
+  portale, lo staff al cruscotto. Creazione da modali, kanban lead con
+  drag & drop, slider di avanzamento delle fasi, kanban task.
 - **Guard globali**: `JwtAuthGuard` (autenticazione) → `RolesGuard` (RBAC).
 - **Seed**: crea tenant di default + admin (`admin@imimusic.local` / `admin1234`,
   override con `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`).
 
-Il modulo `booking` (Sprint 9) è ancora uno **stub**. Manca dell'MVP lo
-Sprint 6 (portale artista in sola lettura, notifiche email, go-live).
-Vedi `ARCHITETTURA.md §6`.
+Il modulo `booking` (Sprint 9) è ancora uno **stub**. Il resto della Fase 2
+(automazione task, penalità, mappa live, KPI avanzati) è da fare — vedi
+`ARCHITETTURA.md §6`.
 
 ## Architettura del monorepo
 

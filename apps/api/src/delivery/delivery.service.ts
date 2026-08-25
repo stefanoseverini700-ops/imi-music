@@ -8,6 +8,7 @@ import { Prisma } from '@imi/db';
 import { Role } from '@imi/shared';
 
 import { PrismaService } from '../prisma/prisma.service.js';
+import { NotificheService } from '../notifiche/notifiche.service.js';
 import type { AuthUser } from '../common/rbac/current-user.decorator.js';
 import type {
   CreatePianoDto,
@@ -24,7 +25,10 @@ import type {
  */
 @Injectable()
 export class DeliveryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifiche: NotificheService,
+  ) {}
 
   // --- Piani -----------------------------------------------------------------
 
@@ -141,8 +145,8 @@ export class DeliveryService {
     });
   }
 
-  createTask(user: AuthUser, dto: CreateTaskDto) {
-    return this.prisma.task.create({
+  async createTask(user: AuthUser, dto: CreateTaskDto) {
+    const task = await this.prisma.task.create({
       data: {
         tenantId: user.tenantId,
         titolo: dto.titolo,
@@ -154,6 +158,17 @@ export class DeliveryService {
       },
       include: { assegnato: { select: { id: true, nome: true } } },
     });
+
+    if (dto.assegnatoA && dto.assegnatoA !== user.id) {
+      await this.notifiche.notifica(
+        user.tenantId,
+        dto.assegnatoA,
+        'TASK',
+        `Ti è stato assegnato il task "${task.titolo}".`,
+        `Nuovo task: ${task.titolo}`,
+      );
+    }
+    return task;
   }
 
   async updateTask(user: AuthUser, id: string, dto: UpdateTaskDto) {

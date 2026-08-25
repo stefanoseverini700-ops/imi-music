@@ -379,14 +379,18 @@ export function NuovaVenditaForm({ artists, onDone }: { artists: Artist[]; onDon
   );
 }
 
-/** Form: nuovo artista. */
-export function NuovoArtistaForm({ onDone }: { onDone: () => void }) {
+/** Form: nuovo artista (con collegamento facoltativo a un account portale). */
+export function NuovoArtistaForm({ users = [], onDone }: { users?: User[]; onDone: () => void }) {
   const [nome, setNome] = useState('');
   const [citta, setCitta] = useState('');
   const [genere, setGenere] = useState('');
   const [piano, setPiano] = useState<string>(ArtistPlan.BASE);
+  const [userId, setUserId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Account con ruolo ARTISTA non ancora collegati ad altra scheda.
+  const accountArtisti = users.filter((u) => u.ruolo === Role.ARTISTA);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -397,6 +401,7 @@ export function NuovoArtistaForm({ onDone }: { onDone: () => void }) {
         nome,
         ...(citta ? { citta } : {}),
         ...(genere ? { genereMusicale: genere } : {}),
+        ...(userId ? { userId } : {}),
         piano,
       });
       onDone();
@@ -421,6 +426,22 @@ export function NuovoArtistaForm({ onDone }: { onDone: () => void }) {
         <option value={ArtistPlan.PRO}>Pro</option>
         <option value={ArtistPlan.PREMIUM}>Premium</option>
       </select>
+      {accountArtisti.length > 0 && (
+        <>
+          <label className={labelCls}>Account portale (facoltativo)</label>
+          <select className={inputCls} value={userId} onChange={(e) => setUserId(e.target.value)}>
+            <option value="">Nessuno</option>
+            {accountArtisti.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nome} · {u.email}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-white/40">
+            Collegando un account con ruolo Artista, quella persona vedrà il proprio portale.
+          </p>
+        </>
+      )}
       <ErrorText error={error} />
       <button type="submit" disabled={loading} className={btnCls}>
         {loading ? 'Salvataggio…' : 'Aggiungi artista'}

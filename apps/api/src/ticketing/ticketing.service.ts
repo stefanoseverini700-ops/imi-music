@@ -4,6 +4,7 @@ import type { TicketPriority as DbPriorita, TicketStatus as DbStato } from '@imi
 import { Role } from '@imi/shared';
 
 import { PrismaService } from '../prisma/prisma.service.js';
+import { NotificheService } from '../notifiche/notifiche.service.js';
 import type { AuthUser } from '../common/rbac/current-user.decorator.js';
 import type {
   CreateDipartimentoDto,
@@ -19,7 +20,10 @@ import type {
  */
 @Injectable()
 export class TicketingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifiche: NotificheService,
+  ) {}
 
   // --- Dipartimenti ---
 
@@ -127,7 +131,7 @@ export class TicketingService {
     if (user.ruolo === Role.ARTISTA) {
       throw new ForbiddenException('Operazione non consentita');
     }
-    return this.prisma.ticket.update({
+    const aggiornato = await this.prisma.ticket.update({
       where: { id },
       data: {
         ...(dto.stato !== undefined ? { stato: dto.stato as DbStato } : {}),
@@ -140,14 +144,43 @@ export class TicketingService {
         assegnato: { select: { id: true, nome: true } },
       },
     });
+
+    if (dto.assegnatoA && dto.assegnatoA !== user.id) {
+      await this.notifiche.notifica(
+        user.tenantId,
+        dto.assegnatoA,
+        'TICKET',
+        `Ti è stato assegnato il ticket "${aggiornato.oggetto}".`,
+        `Ticket assegnato: ${aggiornato.oggetto}`,
+      );
+    }
+    return aggiornato;
   }
 
   async addMessaggio(user: AuthUser, ticketId: string, dto: CreateMessaggioDto) {
-    await this.findOne(user, ticketId);
-    return this.prisma.ticketMessage.create({
+    const ticket = await this.findOne(user, ticketId);
+    const messaggio = await this.prisma.ticketMessage.create({
       data: { ticketId, autoreId: user.id, testo: dto.testo },
       include: { autore: { select: { id: true, nome: true } } },
     });
+
+    // Avvisa l'altra parte: l'assegnatario, altrimenti chi ha aperto il ticket.
+    const destinatario =
+      ticket.assegnatoA && ticket.assegnatoA !== user.id
+        ? ticket.assegnatoA
+        : ticket.creatoDa !== user.id
+          ? ticket.creatoDa
+          : null;
+    if (destinatario) {
+      await this.notifiche.notifica(
+        user.tenantId,
+        destinatario,
+        'TICKET',
+        `Nuovo messaggio sul ticket "${ticket.oggetto}".`,
+        `Ticket: ${ticket.oggetto}`,
+      );
+    }
+    return messaggio;
   }
 
   async remove(user: AuthUser, id: string) {
